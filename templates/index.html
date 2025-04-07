@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Poster Grid</title>
+    <style>
+        @font-face {
+            font-family: 'FiraSansCondensed';
+            src: url('fonts/FiraSansCondensed-Black.ttf') format('truetype');
+        }
+        body {
+            font-family: 'FiraSansCondensed', sans-serif;
+            text-align: center;
+            background-color: #4f4f4f;
+            margin: 0;
+            padding: 20px;
+            color: #ffffff;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        body.light-mode {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        h1 {
+            font-size: 48px;
+            color: #007bff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            margin-bottom: 20px;
+        }
+        .search-bar {
+            margin: 20px auto;
+            padding: 10px;
+            font-size: 16px;
+            width: 80%;
+            border: 2px solid #007bff;
+            border-radius: 5px;
+            outline: none;
+        }
+        .grid-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px;
+        }
+        .grid-item {
+            width: 200px;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+        }
+        .grid-item:hover {
+            transform: scale(1.3);
+        }
+        .grid-item img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        .dark-mode-toggle {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            background-size: contain;
+            border: none;
+            outline: none;
+            transition: transform 0.2s ease;
+            top: 20px;
+            right: 20px;
+            background: url('moon-icon.png') no-repeat center center;
+        }
+        .dark-mode-toggle:hover {
+            transform: scale(1.2);
+        }
+        /* Lightbox */
+        #lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        #lightbox.show {
+            display: flex;
+        }
+        #lightbox img {
+            max-width: 90%;
+            max-height: 60%;
+        }
+        #closeLightbox {
+            margin-top: 20px;
+            font-size: 18px;
+            padding: 6px 12px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        #metadata {
+            color: white;
+            text-align: left;
+            max-width: 80%;
+            margin-top: 20px;
+        }
+    </style>
+    <script>
+        function toggleDarkMode() {
+            const body = document.body;
+            body.classList.toggle('light-mode');
+            const mode = body.classList.contains('light-mode') ? 'light' : 'dark';
+            localStorage.setItem('theme', mode);
+            document.getElementById('darkModeLabel').textContent = mode === 'dark' ? 'Dark Mode' : 'Light Mode';
+        }
+
+        function openLightbox(imageSrc, element) {
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImage = document.getElementById('lightboxImage');
+            const title = element.dataset.title || "";
+            const year = element.dataset.year || "";
+            const rating = element.dataset.rating || "";
+            const plot = element.dataset.plot || "";
+
+            const metadata = `
+                <h2>${title} (${year})</h2>
+                <p><strong>IMDb Rating:</strong> ${rating}</p>
+                <p><strong>Plot:</strong> ${plot}</p>
+            `;
+
+            const metadataDiv = document.createElement('div');
+            metadataDiv.innerHTML = metadata;
+            metadataDiv.id = 'metadata';
+
+            const existingMetadata = document.getElementById('metadata');
+            if (existingMetadata) existingMetadata.remove();
+
+            lightbox.appendChild(metadataDiv);
+            lightboxImage.src = imageSrc;
+            lightbox.classList.add('show');
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImage = document.getElementById('lightboxImage');
+            lightbox.classList.remove('show');
+            lightboxImage.src = '';
+            const existingMetadata = document.getElementById('metadata');
+            if (existingMetadata) existingMetadata.remove();
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+            }
+
+            const searchBar = document.getElementById('searchBar');
+            const gridItems = document.querySelectorAll('.grid-item');
+
+            searchBar.addEventListener('input', function () {
+                const searchTerm = searchBar.value.toLowerCase();
+                gridItems.forEach(item => {
+                    const title = item.getAttribute('data-title');
+                    if (title.includes(searchTerm)) {
+                        item.style.display = 'block';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="dark-mode-toggle">
+        <label id="darkModeLabel" for="darkModeSwitch">Dark Mode</label>
+        <input type="checkbox" id="darkModeSwitch" onchange="toggleDarkMode()">
+    </div>
+    <h1>Movie Posters</h1>
+    <input type="text" id="searchBar" class="search-bar" placeholder="Search...">
+    <div class="grid-container">
+        {grid_items}
+    </div>
+    <div id="lightbox">
+        <img id="lightboxImage" src="" alt="Lightbox Image">
+        <button id="closeLightbox" onclick="closeLightbox()">Close</button>
+    </div>
+</body>
+</html>
