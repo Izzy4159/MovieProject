@@ -7,7 +7,7 @@ import time
 
 PORT = 8000
 
-# 🧠 NEW: Function to clean poster filenames for better API matches
+# NEW: Function to clean poster filenames for better API matches
 def clean_title(raw_name):
     """
     Clean poster file names to make better title guesses for OMDb.
