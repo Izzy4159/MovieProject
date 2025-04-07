@@ -7,6 +7,17 @@ import time
 
 PORT = 8000
 
+# 🧠 NEW: Function to clean poster filenames for better API matches
+def clean_title(raw_name):
+    """
+    Clean poster file names to make better title guesses for OMDb.
+    Removes things like 'ver2', 'xlg', 'poster', etc.
+    """
+    ignore_words = {"ver", "xlg", "poster", "final", "intl", "cover"}
+    parts = raw_name.replace("_", " ").split()
+    cleaned = [word for word in parts if not any(word.lower().startswith(ig) for ig in ignore_words)]
+    return " ".join(cleaned).strip()
+
 def generate_grid_items():
     start_time = time.time()
     posters_path = "posters"
@@ -18,7 +29,10 @@ def generate_grid_items():
     grid_items = ""
 
     for poster in poster_files:
-        title_guess = os.path.splitext(poster)[0].replace("_", " ")
+        # 🎯 Use cleaned-up title for better OMDb matching
+        title_guess = clean_title(os.path.splitext(poster)[0])
+        print(f"[DEBUG] Fetching metadata for: {title_guess}")
+
         movie_info = get_movie_info(title_guess)
 
         if movie_info:
@@ -29,6 +43,7 @@ def generate_grid_items():
                 data-plot="{movie_info['plot']}"
             '''
         else:
+            print(f"[WARN] No metadata found for: {title_guess}")
             data_attrs = f'''
                 data-title="{title_guess}"
                 data-year="N/A"

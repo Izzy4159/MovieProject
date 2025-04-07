@@ -70,7 +70,6 @@
             transition: transform 0.2s ease;
             top: 20px;
             right: 20px;
-            background: url('moon-icon.png') no-repeat center center;
         }
         .dark-mode-toggle:hover {
             transform: scale(1.2);
@@ -125,28 +124,33 @@
         function openLightbox(imageSrc, element) {
             const lightbox = document.getElementById('lightbox');
             const lightboxImage = document.getElementById('lightboxImage');
-            const title = element.dataset.title || "";
-            const year = element.dataset.year || "";
-            const rating = element.dataset.rating || "";
-            const plot = element.dataset.plot || "";
+
+            const parent = element.closest('.grid-item');  // 👈 FIXED
+            const title = parent.dataset.title || "N/A";
+            const year = parent.dataset.year || "N/A";
+            const rating = parent.dataset.rating || "N/A";
+            const plot = parent.dataset.plot || "No plot available";
+
+            console.log("DEBUG:", title, year, rating, plot); // Add this to confirm
 
             const metadata = `
-                <h2>${title} (${year})</h2>
-                <p><strong>IMDb Rating:</strong> ${rating}</p>
-                <p><strong>Plot:</strong> ${plot}</p>
+                <div id="metadata">
+                    <h2>${title} (${year})</h2>
+                    <p><strong>IMDb Rating:</strong> ${rating}</p>
+                    <p><strong>Plot:</strong> ${plot}</p>
+                </div>
             `;
-
-            const metadataDiv = document.createElement('div');
-            metadataDiv.innerHTML = metadata;
-            metadataDiv.id = 'metadata';
 
             const existingMetadata = document.getElementById('metadata');
             if (existingMetadata) existingMetadata.remove();
 
-            lightbox.appendChild(metadataDiv);
             lightboxImage.src = imageSrc;
             lightbox.classList.add('show');
+
+            const closeButton = document.getElementById('closeLightbox');
+            closeButton.insertAdjacentHTML('beforebegin', metadata);
         }
+
 
         function closeLightbox() {
             const lightbox = document.getElementById('lightbox');

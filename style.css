@@ -171,6 +171,24 @@ body.light-mode .dark-mode-toggle label {
     background: rgba(255, 255, 255, 0.2);
 }
 
+/* Metadata in Lightbox */
+#metadata {
+    color: white;
+    text-align: left;
+    max-width: 80%;
+    margin-top: 20px;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 20px;
+    border-radius: 10px;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+body.light-mode #metadata {
+    color: black;
+    background: rgba(255, 255, 255, 0.7);
+}
+
 /* Responsive Media Queries */
 @media (max-width: 768px) {
     .grid-item {
