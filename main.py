@@ -26,14 +26,16 @@ def generate_grid_items():
         key=str.lower
     )
 
+    items_per_page = 50
     grid_items = ""
 
-    for poster in poster_files:
+    for i, poster in enumerate(poster_files):
         # 🎯 Use cleaned-up title for better OMDb matching
         title_guess = clean_title(os.path.splitext(poster)[0])
         print(f"[DEBUG] Fetching metadata for: {title_guess}")
 
         movie_info = get_movie_info(title_guess)
+        page = i // items_per_page + 1  # 50 items per page
 
         if movie_info:
             data_attrs = f'''
@@ -51,11 +53,12 @@ def generate_grid_items():
                 data-plot="No plot available"
             '''
 
-        grid_items += f"""
-        <div class="grid-item" {data_attrs.strip()}>
-            <img src="posters/{poster}" alt="{poster}" onclick="openLightbox('posters/{poster}', this)">
+        grid_items += f'''
+        <div class="grid-item page-{page}" style="display: none;" {data_attrs.strip()}>
+            <img loading="lazy" src="posters/{poster}" alt="{poster}" onclick="openLightbox('posters/{poster}', this)">
         </div>
-        """
+        '''
+
     print(f"[DEBUG] Took {time.time() - start_time:.2f}s to generate grid items")
     return grid_items
 

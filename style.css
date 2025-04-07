@@ -116,7 +116,7 @@ body.light-mode .dark-mode-toggle label {
 .grid-item {
     width: 200px;
     flex-shrink: 0;
-    transition: transform 0.3s ease;
+    transition: transform 0.15s ease-in-out;
 }
 
 .grid-item:hover {
@@ -182,6 +182,14 @@ body.light-mode .dark-mode-toggle label {
     border-radius: 10px;
     font-size: 16px;
     line-height: 1.5;
+    opacity: 0;
+    animation: fadeIn 0.25s ease forwards;
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+    }
 }
 
 body.light-mode #metadata {
