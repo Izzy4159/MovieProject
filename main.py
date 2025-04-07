@@ -12,7 +12,7 @@ def clean_title(raw_name):
     cleaned = [word for word in parts if not any(word.lower().startswith(ig) for ig in ignore_words)]
     return " ".join(cleaned).strip()
 
-# 🖼️ Generate poster grid
+# Generate poster grid
 def generate_grid_items():
     start_time = time.time()
     posters_path = "posters"
@@ -66,7 +66,7 @@ def index():
 def poster(filename):
     return send_from_directory("posters", filename)
 
-# 🔥 Needed for Render deployment
+# Needed for Render deployment
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)

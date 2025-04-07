@@ -48,7 +48,7 @@ MovieProject/
 ├── posters/               # Movie poster images
 ├── templates/
 │   └── index.html         # Main HTML template with injected grid items
-├── styles.css         # Custom styles
+├── styles.css             # Custom styles
 ├── main.py                # Flask app entry point
 ├── omdb_fetcher.py        # OMDb API logic + JSON caching
 ├── requirements.txt       # Python dependencies
