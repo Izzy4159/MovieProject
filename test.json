@@ -1,0 +1,15 @@
+{
+  "title": "Test Push to GitHub",
+  "author": "Israel Garcia",
+  "success": true,
+  "timestamp": "2025-04-06T22:15:00Z",
+  "data": {
+    "id": 101,
+    "tags": ["test", "push", "json"],
+    "details": {
+      "language": "Python",
+      "platform": "GitHub",
+      "purpose": "Push validation"
+    }
+  }
+}
