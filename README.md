@@ -10,13 +10,14 @@ Welcome to **Movie Poster Explorer**, a web-based project that allows users to v
   A collection of beautifully curated movie posters displayed in a grid layout.
 
 - 🔍 **Interactive Preview**  
-  Hover or click on posters to get a larger view.
+  Click on posters to view movie metadata (title, rating, year, plot).  
+  *(Fetched dynamically from the OMDb API)*
 
-- 🧱 **Responsive Design**  
-  Fully responsive and mobile-friendly layout using modern HTML/CSS.
+- 📱 **Responsive Design**  
+  Clean layout built with HTML/CSS and mobile-first design in mind.
 
-- 🧹 **Organized Poster Storage**  
-  Posters are stored in dedicated folders for easy access and scalability.
+- ⚙️ **Flask Backend**  
+  Python/Flask used to generate dynamic HTML using Jinja templates.
 
 ---
 
@@ -24,11 +25,19 @@ Welcome to **Movie Poster Explorer**, a web-based project that allows users to v
 
 | Technology | Purpose |
 |------------|---------|
-| `Python`   | Backend logic and folder organization (if applicable) |
+| `Python` + `Flask` | Backend server to serve posters and metadata |
 | `HTML5`    | Page structure |
 | `CSS3`     | Styling and responsive layout |
-| `JavaScript` (optional) | Interactivity and image preview (planned feature) |
-| `Git` / `GitHub` | Version control and hosting the codebase |
+| `JavaScript` | Lightbox and interactivity |
+| `OMDb API` | Pulls movie data like title, rating, and plot |
+| `Git` / `GitHub` | Version control and project tracking |
+| `Render`   | Deploys the live version (cloud hosting) |
+
+---
+
+## 🚀 Live Version (Hosted on Render)
+
+👉 [https://movieproject-gr3a.onrender.com](https://movieproject-gr3a.onrender.com)
 
 ---
 
@@ -37,8 +46,12 @@ Welcome to **Movie Poster Explorer**, a web-based project that allows users to v
 ```plaintext
 MovieProject/
 ├── posters/               # Movie poster images
-├── images/                # Additional images or icons (optional)
-├── index.html             # Main page file
-├── styles.css             # Custom styles for layout and design
-├── script.js              # JavaScript (optional)
+├── templates/
+│   └── index.html         # Main HTML template with injected grid items
+├── styles.css         # Custom styles
+├── main.py                # Flask app entry point
+├── omdb_fetcher.py        # OMDb API logic + JSON caching
+├── requirements.txt       # Python dependencies
 └── README.md              # This file
+
+
