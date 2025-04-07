@@ -1,23 +1,18 @@
 import os
-import http.server
-import socketserver
-import webbrowser
-from omdb_fetcher import get_movie_info
 import time
+from flask import Flask, render_template_string, send_from_directory
+from omdb_fetcher import get_movie_info
 
-PORT = 8000
+app = Flask(__name__, static_folder='posters')
 
-# NEW: Function to clean poster filenames for better API matches
+# 📦 Function to clean file names
 def clean_title(raw_name):
-    """
-    Clean poster file names to make better title guesses for OMDb.
-    Removes things like 'ver2', 'xlg', 'poster', etc.
-    """
     ignore_words = {"ver", "xlg", "poster", "final", "intl", "cover"}
     parts = raw_name.replace("_", " ").split()
     cleaned = [word for word in parts if not any(word.lower().startswith(ig) for ig in ignore_words)]
     return " ".join(cleaned).strip()
 
+# 🖼️ Generate poster grid
 def generate_grid_items():
     start_time = time.time()
     posters_path = "posters"
@@ -30,12 +25,11 @@ def generate_grid_items():
     grid_items = ""
 
     for i, poster in enumerate(poster_files):
-        # 🎯 Use cleaned-up title for better OMDb matching
         title_guess = clean_title(os.path.splitext(poster)[0])
         print(f"[DEBUG] Fetching metadata for: {title_guess}")
 
         movie_info = get_movie_info(title_guess)
-        page = i // items_per_page + 1  # 50 items per page
+        page = i // items_per_page + 1
 
         if movie_info:
             data_attrs = f'''
@@ -55,35 +49,24 @@ def generate_grid_items():
 
         grid_items += f'''
         <div class="grid-item page-{page}" style="display: none;" {data_attrs.strip()}>
-            <img loading="lazy" src="posters/{poster}" alt="{poster}" onclick="openLightbox('posters/{poster}', this)">
+            <img loading="lazy" src="/posters/{poster}" alt="{poster}" onclick="openLightbox('/posters/{poster}', this)">
         </div>
         '''
 
     print(f"[DEBUG] Took {time.time() - start_time:.2f}s to generate grid items")
     return grid_items
 
-def generate_html():
+@app.route("/")
+def index():
     with open("templates/index.html", "r", encoding="utf-8") as file:
         template = file.read()
-    return template.replace("{grid_items}", generate_grid_items())
+    return render_template_string(template.replace("{grid_items}", generate_grid_items()))
 
-class MyRequestHandler(http.server.SimpleHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == "/":
-            html = generate_html()
-            self.send_response(200)
-            self.send_header("Content-type", "text/html")
-            self.end_headers()
-            self.wfile.write(html.encode("utf-8"))
-        else:
-            super().do_GET()
+@app.route("/posters/<path:filename>")
+def poster(filename):
+    return send_from_directory("posters", filename)
 
-def start_server():
-    os.chdir(os.path.dirname(__file__))
-    with socketserver.TCPServer(("0.0.0.0", PORT), MyRequestHandler) as httpd:
-        print(f"Serving at http://localhost:{PORT}")
-        webbrowser.open(f"http://localhost:{PORT}")
-        httpd.serve_forever()
-
+# 🔥 Needed for Render deployment
 if __name__ == "__main__":
-    start_server()
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)

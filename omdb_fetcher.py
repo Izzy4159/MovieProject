@@ -1,8 +1,9 @@
 import requests
 import json
 from pathlib import Path
+import os
 
-OMDB_API_KEY = "444ceefe"
+OMDB_API_KEY = os.getenv("OMDB_API_KEY", "missing-key")
 CACHE_FILE = Path("omdb_cache.json")
 
 # Load cache on startup
