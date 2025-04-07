@@ -5,7 +5,7 @@ from omdb_fetcher import get_movie_info
 
 app = Flask(__name__, static_folder='posters')
 
-# 📦 Function to clean file names
+# Function to clean file names
 def clean_title(raw_name):
     ignore_words = {"ver", "xlg", "poster", "final", "intl", "cover"}
     parts = raw_name.replace("_", " ").split()
