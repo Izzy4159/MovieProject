@@ -45,17 +45,17 @@ Welcome to **Movie Poster Explorer**, a web-based project that allows users to v
 
 ```plaintext
 MovieProject/
-├── main.py
-├── omdb_fetcher.py
-├── posters/
-├── static/
-│   ├── fonts/
-│   │   └── FiraSansCondensed-Black.ttf
-│   └── style.css
+├── main.py                   # Flask entry point
+├── omdb_fetcher.py           # OMDb API logic + caching
+├── posters/                  # Movie poster images (now .webp format)
+├── static/                   # Static files served by Flask                
+│   ├── style.css             # CSS stylesheet
+│   └── script.js             # ✅ NEW: JavaScript moved from index.html
 ├── templates/
-│   └── index.html
-├── requirements.txt
-└── README.md
+│   └── index.html            # Main HTML template with placeholders like {grid_items}
+├── requirements.txt          # Python dependencies
+└── README.md                 # Project overview
+
 
 
 
