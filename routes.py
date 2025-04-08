@@ -1,7 +1,7 @@
 import os
 import time
 from flask import Blueprint, send_from_directory
-from omdb_fetcher import get_movie_info
+from data import get_movie_info
 
 main_bp = Blueprint("main", __name__)
 
