@@ -46,7 +46,7 @@ Welcome to **Movie Poster Explorer**, a web-based project that allows users to v
 ```plaintext
 MovieProject/
 ├── main.py                   # Flask entry point
-├── omdb_fetcher.py           # OMDb API logic + caching
+├── data.py                   # OMDb API logic + caching
 ├── posters/                  # Movie poster images (now .webp format)
 ├── static/                   # Static files served by Flask                
 │   ├── style.css             # CSS stylesheet
