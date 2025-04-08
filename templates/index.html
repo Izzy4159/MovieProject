@@ -3,234 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ✅ Google Fonts: Fira Sans Condensed -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Sans+Condensed:wght@900&display=swap" rel="stylesheet">
+
+  <!-- ✅ Your custom stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
   <title>Movie Poster Grid</title>
-  <style>
-    @font-face {
-      font-family: 'FiraSansCondensed';
-      src: url('fonts/FiraSansCondensed-Black.ttf') format('truetype');
-    }
-    body {
-      font-family: 'FiraSansCondensed', sans-serif;
-      text-align: center;
-      background-color: #4f4f4f;
-      margin: 0;
-      padding: 20px;
-      color: #ffffff;
-      transition: background-color 0.3s, color 0.3s;
-    }
-    body.light-mode {
-      background-color: #ffffff;
-      color: #000000;
-    }
-    h1 {
-      font-size: 48px;
-      color: #007bff;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-      margin-bottom: 20px;
-    }
-    .search-bar {
-      margin: 20px auto;
-      padding: 10px;
-      font-size: 16px;
-      width: 80%;
-      border: 2px solid #007bff;
-      border-radius: 5px;
-      outline: none;
-    }
-    .grid-container {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 20px;
-      padding: 10px;
-    }
-    .grid-item {
-      width: 200px;
-      flex-shrink: 0;
-      transition: transform 0.3s ease;
-    }
-    .grid-item:hover {
-      transform: scale(1.3);
-    }
-    .grid-item img {
-      width: 100%;
-      height: auto;
-      object-fit: contain;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    }
-    .dark-mode-toggle {
-      position: fixed;
-      width: 40px;
-      height: 40px;
-      cursor: pointer;
-      background-size: contain;
-      border: none;
-      outline: none;
-      transition: transform 0.2s ease;
-      top: 20px;
-      right: 20px;
-    }
-    .dark-mode-toggle:hover {
-      transform: scale(1.2);
-    }
-    #pagination-controls {
-      margin: 20px 0;
-    }
-    #pagination-controls button {
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      margin: 0 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    #pagination-controls span {
-      font-size: 18px;
-      color: #ffffff;
-    }
-    body.light-mode #pagination-controls span {
-      color: #000000;
-    }
 
-    /* Lightbox */
-    #lightbox {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-    }
-    #lightbox.show {
-      display: flex;
-    }
-    #lightbox img {
-      max-width: 90%;
-      max-height: 60%;
-    }
-    #closeLightbox {
-      margin-top: 20px;
-      font-size: 18px;
-      padding: 6px 12px;
-      cursor: pointer;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-    }
-    #metadata {
-      color: white;
-      text-align: left;
-      max-width: 80%;
-      margin-top: 20px;
-    }
-  </style>
-
-  <script>
-    let currentPage = 1;
-    const itemsPerPage = 50;
-
-    function toggleDarkMode() {
-      const body = document.body;
-      body.classList.toggle('light-mode');
-      const mode = body.classList.contains('light-mode') ? 'light' : 'dark';
-      localStorage.setItem('theme', mode);
-      document.getElementById('darkModeLabel').textContent =
-        mode === 'dark' ? 'Dark Mode' : 'Light Mode';
-    }
-
-    function openLightbox(imageSrc, element) {
-      const lightbox = document.getElementById('lightbox');
-      const lightboxImage = document.getElementById('lightboxImage');
-
-      const parent = element.closest('.grid-item');
-      const title = parent.dataset.title || 'N/A';
-      const year = parent.dataset.year || 'N/A';
-      const rating = parent.dataset.rating || 'N/A';
-      const plot = parent.dataset.plot || 'No plot available';
-
-      console.log('DEBUG:', title, year, rating, plot);
-
-      const metadata = `
-        <div id="metadata">
-          <h2>${title} (${year})</h2>
-          <p><strong>IMDb Rating:</strong> ${rating}</p>
-          <p><strong>Plot:</strong> ${plot}</p>
-        </div>
-      `;
-
-      const existingMetadata = document.getElementById('metadata');
-      if (existingMetadata) existingMetadata.remove();
-
-      lightboxImage.src = imageSrc;
-      lightbox.classList.add('show');
-
-      const closeButton = document.getElementById('closeLightbox');
-      closeButton.insertAdjacentHTML('beforebegin', metadata);
-    }
-
-    function closeLightbox() {
-      const lightbox = document.getElementById('lightbox');
-      const lightboxImage = document.getElementById('lightboxImage');
-      lightbox.classList.remove('show');
-      lightboxImage.src = '';
-      const existingMetadata = document.getElementById('metadata');
-      if (existingMetadata) existingMetadata.remove();
-    }
-
-    function changePage(direction) {
-      const allItems = document.querySelectorAll('.grid-item');
-      const totalItems = allItems.length;
-      const totalPages = Math.ceil(totalItems / itemsPerPage);
-
-      currentPage += direction;
-      if (currentPage < 1) currentPage = 1;
-      if (currentPage > totalPages) currentPage = totalPages;
-
-      allItems.forEach(item => (item.style.display = 'none'));
-
-      allItems.forEach((item, index) => {
-        const page = Math.floor(index / itemsPerPage) + 1;
-        if (page === currentPage) {
-          item.style.display = 'block';
-        }
-      });
-
-      document.getElementById('page-number').textContent = currentPage;
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-      const savedTheme = localStorage.getItem('theme');
-      if (savedTheme === 'light') {
-        document.body.classList.add('light-mode');
-      }
-
-      const searchBar = document.getElementById('searchBar');
-      const gridItems = document.querySelectorAll('.grid-item');
-
-      searchBar.addEventListener('input', function () {
-        const searchTerm = searchBar.value.toLowerCase();
-        gridItems.forEach(item => {
-          const title = item.getAttribute('data-title');
-          if (title.includes(searchTerm)) {
-            item.style.display = 'block';
-          } else {
-            item.style.display = 'none';
-          }
-        });
-      });
-
-      changePage(0); // 👈 Show page 1 on load
-    });
-  </script>
+  <!-- ✅ Optional: Remove inline <style> block if all CSS is in style.css -->
 </head>
 
 <body>
@@ -248,7 +32,7 @@
     {grid_items}
   </div>
 
-  <!-- Pagination Moved Here -->
+  <!-- Pagination -->
   <div id="pagination-controls">
     <button onclick="changePage(-1)">Prev</button>
     <span id="page-number">1</span>
@@ -260,5 +44,8 @@
     <img id="lightboxImage" src="" alt="Lightbox Image" />
     <button id="closeLightbox" onclick="closeLightbox()">Close</button>
   </div>
+
+  <!-- ✅ Defer your external JavaScript -->
+  <script src="{{ url_for('static', filename='script.js') }}" defer></script>
 </body>
 </html>
