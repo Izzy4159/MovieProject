@@ -1,6 +1,6 @@
 import os
 import time
-from flask import Blueprint, render_template_string, send_from_directory
+from flask import Blueprint, send_from_directory
 from omdb_fetcher import get_movie_info
 
 main_bp = Blueprint("main", __name__)
@@ -55,11 +55,11 @@ def generate_grid_items():
     print(f"[DEBUG] Took {time.time() - start_time:.2f}s to generate grid items")
     return grid_items
 
+from flask import render_template
 @main_bp.route("/")
 def index():
-    with open("templates/index.html", "r", encoding="utf-8") as file:
-        template = file.read()
-    return render_template_string(template.replace("{grid_items}", generate_grid_items()))
+    grid_html = generate_grid_items()
+    return render_template("index.html", grid_items=grid_html)
 
 @main_bp.route("/posters/<path:filename>")
 def poster(filename):
