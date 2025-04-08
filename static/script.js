@@ -32,6 +32,7 @@ function openLightbox(imageSrc, element) {
   if (existingMetadata) existingMetadata.remove();
 
   lightboxImage.src = imageSrc;
+  lightbox.classList.remove('hidden');
   lightbox.classList.add('show');
 
   const closeButton = document.getElementById('closeLightbox');
@@ -42,7 +43,9 @@ function closeLightbox() {
   const lightbox = document.getElementById('lightbox');
   const lightboxImage = document.getElementById('lightboxImage');
   lightbox.classList.remove('show');
+  lightbox.classList.add('hidden');
   lightboxImage.src = '';
+
   const existingMetadata = document.getElementById('metadata');
   if (existingMetadata) existingMetadata.remove();
 }
@@ -89,5 +92,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  changePage(0); // Show page 1 on load
+  document.getElementById('closeLightbox').addEventListener('click', closeLightbox);
+
+  changePage(0);
 });

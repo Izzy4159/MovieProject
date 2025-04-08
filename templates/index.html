@@ -4,17 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- ✅ Google Fonts: Fira Sans Condensed -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Sans+Condensed:wght@900&display=swap" rel="stylesheet">
 
-  <!-- ✅ Your custom stylesheet -->
+  <!-- Custom Stylesheet -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
   <title>Movie Poster Grid</title>
-
-  <!-- ✅ Optional: Remove inline <style> block if all CSS is in style.css -->
 </head>
 
 <body>
@@ -27,12 +25,10 @@
 
   <input type="text" id="searchBar" class="search-bar" placeholder="Search..." />
 
-  <!-- Poster Grid -->
   <div class="grid-container">
-    {grid_items}
+    {{ grid_items }}
   </div>
 
-  <!-- Pagination -->
   <div id="pagination-controls">
     <button onclick="changePage(-1)">Prev</button>
     <span id="page-number">1</span>
@@ -40,12 +36,11 @@
   </div>
 
   <!-- Lightbox -->
-  <div id="lightbox">
+  <div id="lightbox" class="hidden">
     <img id="lightboxImage" src="" alt="Lightbox Image" />
     <button id="closeLightbox" onclick="closeLightbox()">Close</button>
   </div>
 
-  <!-- ✅ Defer your external JavaScript -->
   <script src="{{ url_for('static', filename='script.js') }}" defer></script>
 </body>
 </html>
