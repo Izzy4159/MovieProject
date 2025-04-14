@@ -1,6 +1,6 @@
 import os
 import time
-from flask import Blueprint, send_from_directory
+from flask import Blueprint, send_from_directory, render_template
 from data import get_movie_info
 
 main_bp = Blueprint("main", __name__)
@@ -15,7 +15,7 @@ def generate_grid_items():
     start_time = time.time()
     posters_path = "posters"
     poster_files = sorted(
-        [f for f in os.listdir(posters_path) if f.endswith((".jpg", ".jpeg", ".png"))],
+        [f for f in os.listdir(posters_path) if f.endswith(".webp")],
         key=str.lower
     )
 
@@ -23,13 +23,10 @@ def generate_grid_items():
     grid_items = ""
 
     for i, poster in enumerate(poster_files):
-        title_guess = clean_title(os.path.splitext(poster)[0])
+        base_name = os.path.splitext(poster)[0]
+        title_guess = clean_title(base_name)
         movie_info = get_movie_info(title_guess)
         page = i // items_per_page + 1
-
-        # Convert original poster filename to .webp
-        base_name = os.path.splitext(poster)[0]
-        webp_filename = base_name + ".webp"
 
         if movie_info:
             data_attrs = f'''
@@ -48,14 +45,13 @@ def generate_grid_items():
 
         grid_items += f'''
         <div class="grid-item page-{page}" style="display: none;" {data_attrs.strip()}>
-            <img loading="lazy" src="/posters/{webp_filename}" alt="{base_name}" onclick="openLightbox('/posters/{webp_filename}', this)">
+            <img loading="lazy" src="/posters/{poster}" alt="{base_name}" onclick="openLightbox('/posters/{poster}', this)">
         </div>
         '''
 
     print(f"[DEBUG] Took {time.time() - start_time:.2f}s to generate grid items")
     return grid_items
 
-from flask import render_template
 @main_bp.route("/")
 def index():
     grid_html = generate_grid_items()
