@@ -1,13 +1,19 @@
 from flask import Flask
 from routes import main_bp
-from flask_compress import Compress  # <-- added
+
+# Make Flask-Compress optional so the app still runs without it
+try:
+    from flask_compress import Compress
+except Exception:
+    Compress = None
 
 app = Flask(__name__)
-Compress(app)  # <-- added: enables gzip/brotli compression for HTML, CSS, JS, JSON
+
+if Compress:
+    Compress(app)  # enables gzip/brotli if available
 
 app.register_blueprint(main_bp)
 
-# Needed for Render deployment
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))
