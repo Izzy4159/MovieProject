@@ -1,7 +1,10 @@
 from flask import Flask
 from routes import main_bp
+from flask_compress import Compress  # <-- added
 
-app = Flask(__name__)  # No need for static_folder='posters'
+app = Flask(__name__)
+Compress(app)  # <-- added: enables gzip/brotli compression for HTML, CSS, JS, JSON
+
 app.register_blueprint(main_bp)
 
 # Needed for Render deployment

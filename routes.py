@@ -1,56 +1,82 @@
-import os
-import time
+# routes.py
+import os, json, time
 from flask import Blueprint, send_from_directory, render_template
-from data import get_movie_info
+from data import get_movie_info  # keep this import if you still want to backfill misses
 
 main_bp = Blueprint("main", __name__)
 
-def clean_title(raw_name):
+POSTERS_DIR = "posters"
+ITEMS_PER_PAGE = 50
+CACHE_PATH = "omdb_cache.json"
+
+# --------------- Load cache ONCE ---------------
+def _load_cache():
+    if os.path.exists(CACHE_PATH):
+        with open(CACHE_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+CACHE = _load_cache()    # dict like { "normalized title": {...} }
+
+def clean_title(raw_name: str) -> str:
     ignore_words = {"ver", "xlg", "poster", "final", "intl", "cover"}
     parts = raw_name.replace("_", " ").split()
-    cleaned = [word for word in parts if not any(word.lower().startswith(ig) for ig in ignore_words)]
+    cleaned = [w for w in parts if not any(w.lower().startswith(ig) for ig in ignore_words)]
     return " ".join(cleaned).strip()
+
+def norm_key(title: str) -> str:
+    return "".join(ch.lower() for ch in title if ch.isalnum() or ch.isspace()).strip()
 
 def generate_grid_items():
     start_time = time.time()
-    posters_path = "posters"
-    poster_files = sorted(
-        [f for f in os.listdir(posters_path) if f.endswith(".webp")],
-        key=str.lower
-    )
 
-    items_per_page = 50
-    grid_items = ""
+    # Faster dir scan on big folders
+    poster_files = []
+    with os.scandir(POSTERS_DIR) as it:
+        for e in it:
+            if e.is_file() and e.name.endswith(".webp"):
+                poster_files.append(e.name)
+    poster_files.sort(key=str.lower)
+
+    grid_items = []
 
     for i, poster in enumerate(poster_files):
         base_name = os.path.splitext(poster)[0]
         title_guess = clean_title(base_name)
-        movie_info = get_movie_info(title_guess)
-        page = i // items_per_page + 1
+        key = norm_key(title_guess)
 
-        if movie_info:
-            data_attrs = f'''
-                data-title="{movie_info['title']}"
-                data-year="{movie_info['year']}"
-                data-rating="{movie_info['rating']}"
-                data-plot="{movie_info['plot']}"
-            '''
+        info = CACHE.get(key)
+        # Optional: lazy backfill misses once, but NOT on every request
+        # if info is None:
+        #     info = get_movie_info(title_guess)
+        #     CACHE[key] = info or {
+        #         "title": title_guess, "year": "N/A", "rating": "N/A", "plot": "No plot available"
+        #     }
+        if info:
+            title = info.get("title") or title_guess
+            year = info.get("year") or "N/A"
+            rating = info.get("rating") if info.get("rating") not in (None, "N/A") else "N/A"
+            plot = info.get("plot") or "No plot available"
         else:
-            data_attrs = f'''
-                data-title="{title_guess}"
-                data-year="N/A"
-                data-rating="N/A"
-                data-plot="No plot available"
-            '''
+            title, year, rating, plot = title_guess, "N/A", "N/A", "No plot available"
 
-        grid_items += f'''
-        <div class="grid-item page-{page}" style="display: none;" {data_attrs.strip()}>
-            <img loading="lazy" src="/posters/{poster}" alt="{base_name}" onclick="openLightbox('/posters/{poster}', this)">
+        page = i // ITEMS_PER_PAGE + 1
+
+        # IMPORTANT: URL-encode only in the src (template string can contain special chars)
+        item_html = f'''
+        <div class="grid-item page-{page}" style="display:none;"
+             data-title="{title}" data-year="{year}" data-rating="{rating}" data-plot="{plot}">
+          <img loading="lazy" decoding="async" fetchpriority="low"
+               src="/posters/{poster}"
+               alt="{base_name}"
+               onclick="openLightbox('/posters/{poster}', this)">
         </div>
         '''
+        grid_items.append(item_html)
 
-    print(f"[DEBUG] Took {time.time() - start_time:.2f}s to generate grid items")
-    return grid_items
+    html = "\n".join(grid_items)
+    print(f"[FAST] grid items in {time.time()-start_time:.2f}s (no API calls)")
+    return html
 
 @main_bp.route("/")
 def index():
@@ -59,4 +85,5 @@ def index():
 
 @main_bp.route("/posters/<path:filename>")
 def poster(filename):
-    return send_from_directory("posters", filename)
+    # Long-cache images
+    return send_from_directory(POSTERS_DIR, filename, cache_timeout=60*60*24*365)
