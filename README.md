@@ -1,6 +1,7 @@
 # 🎬 Movie Poster Explorer
 
-Welcome to **Movie Poster Explorer**, a web-based project that allows users to visually browse high-quality movie posters in an interactive and user-friendly layout. This is a fun and creative project that showcases classic and modern movie posters, organized neatly with preview functionality.
+Welcome to **Movie Poster Explorer**, A personal web project to display and explore my favorite movies and series with a **clean, modern UI**.  
+Unlike other poster sites, the focus here is on **style + curation**: every poster is handpicked, converted to `.webp`, and laid out in a responsive grid with lightbox previews.
 
 ---
 
@@ -28,19 +29,32 @@ Welcome to **Movie Poster Explorer**, a web-based project that allows users to v
 
 ---
 
+## ✨ Goal
+
+The goal is to create a **beautiful, unique website** for browsing movie/anime posters that I like — not just a database clone.  
+It emphasizes:
+
+- 🎨 **Minimal + clean UI** (no clutter, smooth hover effects, and responsive design).  
+- 🖼️ **High-quality poster images** with lightbox previews.  
+- ⚡ **Metadata support** from APIs (OMDb + Jikan for anime).  
+- 📱 **Mobile-friendly browsing** with pagination & search.  
+
+---
+
 ## 🧰 Tech Stack
 
-| Technology     | Purpose                                               |
-|----------------|-------------------------------------------------------|
-| `Python` + `Flask` | Backend server to serve posters and metadata     |
-| `HTML5`        | Page structure                                        |
-| `CSS3`         | Styling and responsive layout                         |
-| `JavaScript`   | Lightbox, pagination, and interactivity               |
-| `OMDb API`     | Pulls movie/TV data like title, rating, and plot      |
-| `Jikan API`    | Pulls anime metadata from MyAnimeList                |
-| `difflib`      | Used for fuzzy title matching with search results     |
-| `Render`       | Cloud deployment platform                             |
-| `Git` / `GitHub` | Version control and collaboration                  |
+| Technology        | Purpose                                                        |
+|-------------------|----------------------------------------------------------------|
+| `Python` + `Flask`| Backend server, routing, caching, and API integration          |
+| `HTML5`           | Page structure                                                 |
+| `CSS3`            | Styling, responsive layout, animations, and dark/light mode    |
+| `JavaScript`      | Lightbox, pagination, search, and interactivity                |
+| `OMDb API`        | Fetches movie/TV metadata (title, year, rating, plot)          |
+| `Jikan API`       | Fetches anime metadata from MyAnimeList                        |
+| `difflib`         | Fuzzy matching between poster filenames and API results        |
+| `Flask-Compress`  | Enables gzip/br compression for faster static file delivery    |
+| `Render` / `Railway` / `Heroku` | Deployment platforms for hosting the project     |
+| `Git` / `GitHub`  | Version control and project collaboration                      |
 
 ---
 
@@ -50,19 +64,58 @@ Welcome to **Movie Poster Explorer**, a web-based project that allows users to v
 
 ---
 
+## 📸 UI Features
+ - Poster Grid – responsive, with hover animations.
+ - Lightbox View – click a poster to see title, year, rating, and plot.
+ - Dark/Light Mode toggle.
+ - Pagination + Search to navigate large collections.
+
+---
+
+## 📝 Notes
+ - No .venv is included in this repo (create your own local venv if needed).
+ - Poster collection is personal curation → this site is about style + favorite movies rather than completeness.
+ - .webp conversion via convert_to_webp.py keeps loading fast.
+
+---
+
 ## 🗂️ Project Structure
 
 ```plaintext
 MovieProject/
-├── main.py                   # Flask entry point (runs the app)
-├── data.py                   # OMDb + Jikan API integration with caching and fuzzy matching
-├── routes.py                 # Poster grid logic + file cleaning + HTML generation
-├── omdb_cache.json           # Cached metadata from API calls
-├── posters/                  # Movie poster images (converted to .webp format)
-├── static/                   # Static files served by Flask                
-│   ├── style.css             # CSS stylesheet
-│   └── script.js             # JavaScript for dark mode, pagination, lightbox
-├── templates/
-│   └── index.html            # HTML template that injects `grid_items`
-├── requirements.txt          # Python dependencies for Flask + requests
-└── README.md                 # Project overview and documentation
+├── .DS_Store
+├── .gitignore
+├── convert_to_webp.py        # Utility to batch convert images to .webp
+├── data.py                   # Fetch metadata (OMDb/Jikan) + caching
+├── main.py                   # Flask app entry point
+├── omdb_cache.json           # Cached API responses
+├── project_structure.txt     # Snapshot of full folder structure
+├── README.md                 # Project documentation (this file)
+├── requirements.txt          # Python dependencies
+├── routes.py                 # Routing + poster grid rendering
+│
+├── .idea/                    # PyCharm project files
+│   └── inspectionProfiles/   # Code style/inspection settings
+│
+├── posters/                  # 🎨 Main poster collection (.webp)
+│   ├── A Silent Voice.webp
+│   ├── alien_xlg.webp
+│   ├── avatar_the_way_of_water_xlg.webp
+│   ├── breaking_bad_ver11_xlg.webp
+│   ├── … (hundreds more posters)
+│
+├── static/                   # Frontend assets
+│   ├── script.js             # Interactivity (pagination, dark mode, lightbox)
+│   └── style.css             # CSS styles (grid, animations, clean UI)
+│
+├── templates/                # Jinja2 templates
+│   └── index.html            # Injects posters + metadata into grid
+│
+├── TerminalBehavior/         # VSCode terminal settings
+│   ├── terminal.integrated.copyOnSelection
+│   └── terminal.integrated.rightClickBehavior
+│
+└── __pycache__/              # Python cache files
+    ├── data.cpython-312.pyc
+    ├── omdb_fetcher.cpython-312.pyc
+    └── routes.cpython-312.pyc

@@ -1,30 +1,88 @@
+#!/usr/bin/env python3
 import os
+import sys
 import subprocess
+import shutil
+from pathlib import Path
 
-input_folder = "posters"
+from PIL import Image
 
-for filename in os.listdir(input_folder):
-    file_path = os.path.join(input_folder, filename)
-    name, ext = os.path.splitext(filename)
-    ext = ext.lower()
+# ----------------- CONFIG -----------------
+INPUT_DIR = Path("posters")     # change if needed
+QUALITY = 95                    # webp quality (0-100, 95 = near-lossless)
+MAX_DIM = 3840                  # max width/height (≈ 4K)
+RECURSIVE = True                # walk subfolders
+DELETE_ORIGINALS = True         # delete source after successful convert
+OVERWRITE_WEBP = False          # re-create even if .webp exists
+# ------------------------------------------
 
-    # Convert only if it's a jpg/jpeg/png and webp doesn't already exist
-    if ext in (".jpg", ".jpeg", ".png"):
-        webp_path = os.path.join(input_folder, name + ".webp")
+VALID_EXTS = {".jpg", ".jpeg", ".png"}
 
-        if not os.path.exists(webp_path):
-            print(f"Converting: {filename} → {name}.webp")
-            result = subprocess.run(["cwebp", "-q", "80", file_path, "-o", webp_path])
+def resize_if_needed(img: Image.Image) -> Image.Image:
+    """Resize image to fit within MAX_DIM (keep aspect ratio)."""
+    w, h = img.size
+    if max(w, h) <= MAX_DIM:
+        return img  # no resizing
+    scale = MAX_DIM / max(w, h)
+    new_w, new_h = int(w * scale), int(h * scale)
+    return img.resize((new_w, new_h), Image.LANCZOS)
 
-            if result.returncode == 0:
-                print(f"✅ Converted and now deleting original: {filename}")
-                os.remove(file_path)
+def convert_with_pillow(src: Path, dst: Path, quality: int) -> bool:
+    try:
+        with Image.open(src) as im:
+            # Convert to RGB/ RGBA if needed
+            if im.mode in ("P", "LA"):
+                im = im.convert("RGBA")
             else:
-                print(f"❌ Failed to convert: {filename}")
-        else:
-            print(f"🟡 Skipping {filename} — .webp already exists")
-            os.remove(file_path)  # Still remove the original even if webp already exists
+                im = im.convert("RGB")
 
+            # Resize if bigger than 4K
+            im = resize_if_needed(im)
+
+            im.save(dst, "WEBP", quality=quality, method=6)
+        return True
+    except Exception as e:
+        print(f"❌ Pillow convert failed for {src.name}: {e}")
+        return False
+
+def iter_files(root: Path):
+    if RECURSIVE:
+        yield from (p for p in root.rglob("*") if p.is_file())
     else:
-        # Do nothing for .webp or other formats
-        continue
+        yield from (p for p in root.iterdir() if p.is_file())
+
+def main():
+    total = converted = skipped = deleted = failed = 0
+
+    for src in iter_files(INPUT_DIR):
+        if src.suffix.lower() not in VALID_EXTS:
+            continue
+        total += 1
+        dst = src.with_suffix(".webp")
+
+        if dst.exists() and not OVERWRITE_WEBP:
+            print(f"🟡 Skipping (exists): {dst.name}")
+            if DELETE_ORIGINALS:
+                src.unlink()
+            skipped += 1
+            continue
+
+        print(f"Converting {src.name} → {dst.name}")
+        ok = convert_with_pillow(src, dst, QUALITY)
+
+        if ok:
+            converted += 1
+            if DELETE_ORIGINALS:
+                src.unlink()
+                deleted += 1
+                print(f"✅ Converted & deleted {src.name}")
+        else:
+            failed += 1
+
+    print("\nSUMMARY")
+    print(f"Total: {total}, Converted: {converted}, Skipped: {skipped}, Deleted: {deleted}, Failed: {failed}")
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        INPUT_DIR = Path(sys.argv[1])
+    main()

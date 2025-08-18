@@ -26,15 +26,36 @@ body.light-mode h1 {
   color: #0056b3;
 }
 
-/* Search */
+/* Search (polished pill) */
 .search-bar {
-  margin: 20px auto;
-  padding: 10px;
-  font-size: 16px;
-  width: 80%;
-  border: 2px solid #007bff;
-  border-radius: 5px;
+  margin: 24px auto 16px;
+  padding: 14px 20px;
+  font-size: 18px;
+  width: min(900px, 92%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;            /* pill shape */
   outline: none;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25) inset, 0 3px 14px rgba(0, 0, 0, 0.12);
+  color: #fff;
+  backdrop-filter: blur(6px);
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.search-bar::placeholder {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+body.light-mode .search-bar {
+  color: #111;
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) inset, 0 3px 12px rgba(0, 0, 0, 0.06);
+}
+
+.search-bar:focus {
+  border-color: #3aa0ff;
+  box-shadow: 0 0 0 3px rgba(58, 160, 255, 0.25), 0 3px 14px rgba(0, 0, 0, 0.18);
 }
 
 /* Toggle */
@@ -48,6 +69,7 @@ body.light-mode h1 {
   background: transparent;
   padding: 5px;
   border-radius: 20px;
+  z-index: 10001;
 }
 
 .dark-mode-toggle label {
@@ -122,28 +144,46 @@ body.light-mode .dark-mode-toggle label {
   max-height: 90%;
 }
 
-#closeLightbox {
+/* Close button: red X, top-left with hover grow/brighten */
+#closeLightbox.close-x {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  font-size: 24px;
-  color: white;
-  background: transparent;
+  top: 18px;
+  left: 18px;
+  width: 40px;
+  height: 40px;
+  line-height: 38px;
+  text-align: center;
+  font-size: 26px;
+  font-weight: 900;
+  color: #fff;
+  background: #d93025; /* Google red-ish */
   border: none;
+  border-radius: 50%;
   cursor: pointer;
-  padding: 10px;
-  border-radius: 5px;
+  padding: 0;
+  opacity: 0.9;
+  box-shadow: 0 4px 14px rgba(217, 48, 37, 0.45);
+  transition: transform 0.12s, box-shadow 0.12s, background 0.12s, opacity 0.12s;
 }
 
-#closeLightbox:hover {
-  background: rgba(255, 255, 255, 0.2);
+#closeLightbox.close-x:hover {
+  transform: scale(1.12);
+  background: #ff3b2f;
+  box-shadow: 0 0 18px rgba(255, 59, 47, 0.7), 0 0 36px rgba(255, 59, 47, 0.55);
+  opacity: 1;
 }
 
+#closeLightbox.close-x:active {
+  transform: scale(1.04);
+}
+
+/* Metadata panel inside lightbox */
 #metadata {
   color: white;
   text-align: left;
   max-width: 80%;
   margin-top: 20px;
+  margin-left: 18px; /* line up nicely under close button */
   background: rgba(0, 0, 0, 0.6);
   padding: 20px;
   border-radius: 10px;
@@ -159,21 +199,116 @@ body.light-mode #metadata {
 }
 
 @keyframes fadeIn {
-  to {
-    opacity: 1;
-  }
+  to { opacity: 1; }
 }
 
+/* Floating pagination bubble */
+.pagination {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 10000;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+body.light-mode .pagination {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(0,0,0,0.08);
+}
+
+#page-number {
+  font-weight: 700;
+  min-width: 28px;
+  text-align: center;
+  opacity: 0.9;
+}
+
+/* Pager buttons: transparent by default; glow + enlarge on hover */
+.pager-btn {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02));
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.14s, box-shadow 0.14s, background 0.14s, opacity 0.14s;
+  opacity: 0.75; /* slightly transparent by default */
+}
+
+body.light-mode .pager-btn {
+  color: #111;
+  border-color: rgba(0,0,0,0.15);
+  background: linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.00));
+}
+
+.pager-btn:hover {
+  transform: translateY(-1px) scale(1.06);
+  box-shadow: 0 0 16px rgba(0, 123, 255, 0.55), 0 8px 22px rgba(0, 0, 0, 0.28);
+  opacity: 1;
+}
+
+.pager-btn:active {
+  transform: translateY(0) scale(1.02);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.22);
+}
+
+.pager-btn.primary {
+  border-color: rgba(0, 123, 255, 0.6);
+  background: linear-gradient(180deg, rgba(0,123,255,0.9), rgba(0,123,255,0.75));
+}
+
+body.light-mode .pager-btn.primary {
+  background: linear-gradient(180deg, rgba(0,123,255,0.95), rgba(0,123,255,0.82));
+  color: #fff;
+}
+
+/* Extra blue glow class (kept from earlier) */
+.glow {
+  box-shadow: 0 0 18px rgba(0, 123, 255, 0.45), 0 0 38px rgba(0, 123, 255, 0.35);
+}
+
+/* Disabled state */
+.pager-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Mobile: center the bubble at bottom */
 @media (max-width: 768px) {
-  .grid-item {
-    flex: 0 1 calc(50% - 20px);
-    max-width: calc(50% - 20px);
+  .pagination {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: 12px;
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .pager-btn {
+    font-size: 16px;
+    padding: 10px 14px;
+  }
+
+  #page-number {
+    font-size: 16px;
   }
 }
 
-@media (max-width: 480px) {
-  .grid-item {
-    flex: 0 1 calc(50% - 20px);
-    max-width: 50%;
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .pager-btn, .pagination, .grid-item, #closeLightbox.close-x {
+    transition: none !important;
   }
 }

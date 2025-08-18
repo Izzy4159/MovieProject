@@ -15,10 +15,10 @@ function openLightbox(imageSrc, element) {
   const lightboxImage = document.getElementById('lightboxImage');
 
   const parent = element.closest('.grid-item');
-  const title = parent.dataset.title || 'N/A';
-  const year = parent.dataset.year || 'N/A';
-  const rating = parent.dataset.rating || 'N/A';
-  const plot = parent.dataset.plot || 'No plot available';
+  const title = parent?.dataset.title || 'N/A';
+  const year = parent?.dataset.year || 'N/A';
+  const rating = parent?.dataset.rating || 'N/A';
+  const plot = parent?.dataset.plot || 'No plot available';
 
   const metadata = `
     <div id="metadata">
@@ -35,8 +35,9 @@ function openLightbox(imageSrc, element) {
   lightbox.classList.remove('hidden');
   lightbox.classList.add('show');
 
+  // Insert metadata just after the close button so it stays near top-left
   const closeButton = document.getElementById('closeLightbox');
-  closeButton.insertAdjacentHTML('beforebegin', metadata);
+  closeButton.insertAdjacentHTML('afterend', metadata);
 }
 
 function closeLightbox() {
@@ -53,7 +54,7 @@ function closeLightbox() {
 function changePage(direction) {
   const allItems = document.querySelectorAll('.grid-item');
   const totalItems = allItems.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
 
   currentPage += direction;
   if (currentPage < 1) currentPage = 1;
@@ -69,30 +70,66 @@ function changePage(direction) {
   });
 
   document.getElementById('page-number').textContent = currentPage;
+
+  // Disable/enable Prev/Next appropriately
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  if (prevBtn && nextBtn) {
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
+  }
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+  // Respect saved theme
   const savedTheme = localStorage.getItem('theme');
   if (savedTheme === 'light') {
     document.body.classList.add('light-mode');
+    const label = document.getElementById('darkModeLabel');
+    if (label) label.textContent = 'Light Mode';
   }
 
+  // Search filter
   const searchBar = document.getElementById('searchBar');
   const gridItems = document.querySelectorAll('.grid-item');
 
-  searchBar.addEventListener('input', function () {
-    const searchTerm = searchBar.value.toLowerCase();
-    gridItems.forEach(item => {
-      const title = item.getAttribute('data-title');
-      if (title.includes(searchTerm)) {
-        item.style.display = 'block';
-      } else {
-        item.style.display = 'none';
+  if (searchBar) {
+    searchBar.addEventListener('input', function () {
+      const searchTerm = searchBar.value.toLowerCase().trim();
+      let visibleCount = 0;
+
+      gridItems.forEach(item => {
+        const title = (item.getAttribute('data-title') || '').toLowerCase();
+        const match = title.includes(searchTerm);
+        item.style.display = match ? 'block' : 'none';
+        if (match) visibleCount++;
+      });
+
+      // When searching, keep page number as 1 and disable buttons as needed
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      document.getElementById('page-number').textContent = 1;
+      if (prevBtn && nextBtn) {
+        const pagingDisabled = searchTerm.length > 0 || visibleCount <= itemsPerPage;
+        prevBtn.disabled = true;
+        nextBtn.disabled = pagingDisabled;
       }
     });
+  }
+
+  // Keyboard navigation + close
+  document.addEventListener('keydown', (e) => {
+    const active = document.activeElement;
+    const typing = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+    if (typing) return;
+
+    if (e.key === 'ArrowRight') changePage(1);
+    if (e.key === 'ArrowLeft') changePage(-1);
+    if (e.key === 'Escape') closeLightbox();
   });
 
-  document.getElementById('closeLightbox').addEventListener('click', closeLightbox);
+  document.getElementById('closeLightbox')?.addEventListener('click', closeLightbox);
 
+  // Initialize first page
   changePage(0);
 });

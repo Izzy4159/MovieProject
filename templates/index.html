@@ -16,6 +16,7 @@
 </head>
 
 <body>
+  <!-- Dark/Light toggle -->
   <div class="dark-mode-toggle">
     <label id="darkModeLabel" for="darkModeSwitch">Dark Mode</label>
     <input type="checkbox" id="darkModeSwitch" onchange="toggleDarkMode()" />
@@ -23,22 +24,27 @@
 
   <h1>Movie Posters</h1>
 
-  <input type="text" id="searchBar" class="search-bar" placeholder="Search..." />
+  <!-- Search -->
+  <input type="text" id="searchBar" class="search-bar" placeholder="Search titles…" />
 
+  <!-- Grid -->
   <div class="grid-container">
     {{ grid_items | safe }}
   </div>
 
-  <div id="pagination-controls">
-    <button onclick="changePage(-1)">Prev</button>
-    <span id="page-number">1</span>
-    <button onclick="changePage(1)">Next</button>
+  <!-- Floating Pagination -->
+  <div id="pagination-controls" class="pagination" aria-label="Pagination controls">
+    <button id="prevBtn" class="pager-btn" onclick="changePage(-1)" aria-label="Previous page">‹ Prev</button>
+    <span id="page-number" aria-live="polite">1</span>
+    <button id="nextBtn" class="pager-btn primary glow" onclick="changePage(1)" aria-label="Next page">Next ›</button>
   </div>
 
   <!-- Lightbox -->
   <div id="lightbox" class="hidden">
+    <!-- Close button: red X, top-left -->
+    <button id="closeLightbox" class="close-x" title="Close (Esc)">×</button>
+
     <img id="lightboxImage" src="" alt="Lightbox Image" />
-    <button id="closeLightbox" onclick="closeLightbox()">Close</button>
   </div>
 
   <script src="{{ url_for('static', filename='script.js') }}" defer></script>

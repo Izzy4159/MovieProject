@@ -1,0 +1,22 @@
+@"
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Local env & OS junk
+.env
+.env.*
+.DS_Store
+
+# Project artifacts
+omdb_cache.json
+"@ | Out-File -Encoding ASCII .gitignore
+
+# If .venv already got added once:
+git rm -r --cached .venv
+git add .gitignore
+git commit -m "Ignore .venv and local artifacts"

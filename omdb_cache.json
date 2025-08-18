@@ -67,7 +67,7 @@
   },
   "andor": {
     "title": "Andor",
-    "year": "2022\u20132025",
+    "year": "2022–2025",
     "rating": "8.4",
     "plot": "In an era filled with danger, deception, and intrigue, Cassian Andor embark on a path that is destined to turn him into a Rebel hero."
   },
@@ -165,7 +165,7 @@
     "title": "Batman v Superman: Dawn of Justice",
     "year": "2016",
     "rating": "6.5",
-    "plot": "Batman is manipulated by Lex Luthor to fear Superman. Superman\u00b4s existence is meanwhile dividing the world and he is framed for murder during an international crisis. The heroes clash and force the neutral Wonder Woman to reemerge."
+    "plot": "Batman is manipulated by Lex Luthor to fear Superman. Superman´s existence is meanwhile dividing the world and he is framed for murder during an international crisis. The heroes clash and force the neutral Wonder Woman to reemerge."
   },
   "batman": {
     "title": "Batman",
@@ -193,7 +193,7 @@
   },
   "birds of prey": {
     "title": "Birds of Prey",
-    "year": "2002\u20132003",
+    "year": "2002–2003",
     "rating": "6.4",
     "plot": "In the future, long after the Batman has driven himself into exile, his legacy lives on in the form of the Birds of Prey--Black Canary, Oracle, and the Huntress."
   },
@@ -217,7 +217,7 @@
   },
   "breaking bad": {
     "title": "Breaking Bad",
-    "year": "2008\u20132013",
+    "year": "2008–2013",
     "rating": "9.5",
     "plot": "A chemistry teacher diagnosed with inoperable lung cancer turns to manufacturing and selling methamphetamine with a former student to secure his family's future."
   },
@@ -313,7 +313,7 @@
   },
   "daredevil": {
     "title": "Daredevil",
-    "year": "2015\u20132018",
+    "year": "2015–2018",
     "rating": "8.6",
     "plot": "A blind lawyer by day, vigilante by night. Matt Murdock fights the crime of New York as Daredevil."
   },
@@ -487,7 +487,7 @@
   },
   "game of thrones": {
     "title": "Game of Thrones",
-    "year": "2011\u20132019",
+    "year": "2011–2019",
     "rating": "9.2",
     "plot": "Nine noble families fight for control over the lands of Westeros, while an ancient enemy returns after being dormant for millennia."
   },
@@ -559,7 +559,7 @@
   },
   "halo": {
     "title": "Halo",
-    "year": "2022\u20132024",
+    "year": "2022–2024",
     "rating": "7.3",
     "plot": "With the galaxy on the brink of destruction, Master Chief John-117 leads his team of Spartans against the alien threat known as the Covenant."
   },
@@ -823,7 +823,7 @@
   },
   "lord of the rings the rings of power": {
     "title": "The Lord of the Rings: The Rings of Power",
-    "year": "2022\u2013",
+    "year": "2022–",
     "rating": "6.9",
     "plot": "Epic drama set thousands of years before the events of J.R.R. Tolkien's 'The Hobbit' and 'The Lord of the Rings' follows an ensemble cast of characters, both familiar and new, as they confront the long-feared re-emergence of evil ..."
   },
@@ -859,7 +859,7 @@
   },
   "marvelous mrs maisel": {
     "title": "The Marvelous Mrs. Maisel",
-    "year": "2017\u20132023",
+    "year": "2017–2023",
     "rating": "8.7",
     "plot": "After her husband leaves her, young mother of two Miriam \"Midge\" Maisel discovers that she has a talent for stand-up comedy. Could this be her calling?"
   },
@@ -985,7 +985,7 @@
   },
   "revenant": {
     "title": "Revenant",
-    "year": "2023\u2013",
+    "year": "2023–",
     "rating": "7.9",
     "plot": "Ku San Young works and studies at night to become a public officer. After receiving a relic from her dead father mysterious deaths take place around her, and she finds herself slowly changing."
   },
@@ -1027,7 +1027,7 @@
   },
   "shogun": {
     "title": "Shogun",
-    "year": "2024\u20132026",
+    "year": "2024–2026",
     "rating": "8.6",
     "plot": "When a mysterious European ship is found marooned in a nearby Japanese fishing village, Lord Yoshii Toranaga discovers secrets that could tip the scales of power and devastate his enemies."
   },
@@ -1063,13 +1063,13 @@
   },
   "simpsons": {
     "title": "The Simpsons",
-    "year": "1989\u2013",
+    "year": "1989–",
     "rating": "8.7",
     "plot": "The satiric half-hour adventures of a working-class family in the misfit city of Springfield."
   },
   "snowfall": {
     "title": "Snowfall",
-    "year": "2017\u20132023",
+    "year": "2017–2023",
     "rating": "8.4",
     "plot": "A look at the early days of the crack cocaine epidemic in Los Angeles during the beginning of the 1980s."
   },
@@ -1129,7 +1129,7 @@
   },
   "star wars the clone wars": {
     "title": "Star Wars: The Clone Wars",
-    "year": "2008\u20132020",
+    "year": "2008–2020",
     "rating": "8.4",
     "plot": "Jedi Knights lead the Grand Army of the Republic against the droid army of the Separatists."
   },
@@ -1153,7 +1153,7 @@
   },
   "stranger things": {
     "title": "Stranger Things",
-    "year": "2016\u20132025",
+    "year": "2016–2025",
     "rating": "8.7",
     "plot": "In 1980s Indiana, a group of young friends witness supernatural forces and secret government exploits. As they search for answers, the children unravel a series of extraordinary mysteries."
   },
@@ -1245,7 +1245,7 @@
     "title": "Thor: Ragnarok",
     "year": "2017",
     "rating": "7.9",
-    "plot": "Imprisoned on the planet Sakaar, Thor must race against time to return to Asgard and stop Ragnar\u00f6k, the destruction of his world, at the hands of the powerful and ruthless villain Hela."
+    "plot": "Imprisoned on the planet Sakaar, Thor must race against time to return to Asgard and stop Ragnarök, the destruction of his world, at the hands of the powerful and ruthless villain Hela."
   },
   "thor the dark world": {
     "title": "Thor: The Dark World",
@@ -1381,7 +1381,7 @@
   },
   "witcher": {
     "title": "The Witcher",
-    "year": "2019\u2013",
+    "year": "2019–",
     "rating": "7.9",
     "plot": "Geralt of Rivia, a solitary monster hunter, struggles to find his place in a world where people often prove more wicked than beasts."
   },
@@ -1429,7 +1429,7 @@
   },
   "yellowjackets": {
     "title": "Yellowjackets",
-    "year": "2021\u2013",
+    "year": "2021–",
     "rating": "7.8",
     "plot": "A wildly talented girls high school soccer team become the unlucky survivors of a plane crash deep in the Canadian wilderness."
   },
@@ -1441,7 +1441,7 @@
   },
   "avatar the last airbender": {
     "title": "Avatar: The Last Airbender",
-    "year": "2005\u20132008",
+    "year": "2005–2008",
     "rating": "9.3",
     "plot": "In a war-torn world of elemental powers, a young boy reawakens to undertake a dangerous mystic quest to fulfill his destiny as the Avatar, and bring peace to the world."
   },
@@ -1451,7 +1451,7 @@
     "rating": "8.1",
     "plot": "There's a mystery afoot in Gotham City, and Batman must go toe-to-toe with a mysterious vigilante, who goes by the name of Red Hood. Subsequently, old wounds reopen and old, once buried memories come into the light."
   },
-  "fate:stay night [heaven\u2019s feel] iii. spring song": {
+  "fate:stay night [heaven’s feel] iii. spring song": {
     "title": "Fate/stay night [Heaven's Feel] III. spring song",
     "year": "2020",
     "rating": "7.9",
@@ -1459,7 +1459,7 @@
   },
   "futurama": {
     "title": "Futurama",
-    "year": "1999\u2013",
+    "year": "1999–",
     "rating": "8.5",
     "plot": "Philip J. Fry, a pizza delivery boy, is accidentally frozen in 1999 and thawed out on New Year's Eve 2999."
   },
@@ -1471,19 +1471,19 @@
   },
   "light shop": {
     "title": "Light Shop",
-    "year": "2024\u2013",
+    "year": "2024–",
     "rating": "N/A",
     "plot": "The living and the dead intersecting as this world and the afterlife are connected through a store selling lighting."
   },
   "naruto shippuden": {
     "title": "Naruto: Shippuden",
-    "year": "2007\u20132017",
+    "year": "2007–2017",
     "rating": "8.7",
     "plot": "Naruto Uzumaki, is a loud, hyperactive, adolescent ninja who constantly searches for approval and recognition, as well as to become Hokage, who is acknowledged as the leader and strongest of all ninja in the village."
   },
   "sword art online ii": {
     "title": "Your Anime Sucks: Sword Art Online II",
-    "year": "2014\u20132015",
+    "year": "2014–2015",
     "rating": "7.0",
     "plot": "Across 4 episodes Digibro (Conrad Collins) explains to the world where his irrational hatred for Sword Art Online comes from."
   },
@@ -1495,13 +1495,13 @@
   },
   "sword art online": {
     "title": "Sword Art Online",
-    "year": "2012\u2013",
+    "year": "2012–",
     "rating": "7.5",
     "plot": "In the year 2022, thousands of people get trapped in a new virtual MMORPG and the lone wolf player, Kirito, works to escape."
   },
   "vinland saga": {
     "title": "Vinland Saga",
-    "year": "2019\u20132023",
+    "year": "2019–2023",
     "rating": "8.8",
     "plot": "Following a tragedy, Thorfinn embarks on a journey with the man responsible for it to take his life in a duel as a true and honorable warrior to pay homage."
   },
@@ -1513,7 +1513,7 @@
   },
   "daredevil born again": {
     "title": "Daredevil: Born Again",
-    "year": "2025\u2013",
+    "year": "2025–",
     "rating": "N/A",
     "plot": "Matt Murdock finds himself on a collision course with Wilson Fisk when their past identities begin to emerge."
   },
@@ -1528,7 +1528,7 @@
     "title": "Arcana Famiglia",
     "year": 2012,
     "rating": 6.26,
-    "plot": "\u200bOn the island of Regalo, a group of supernaturally powered mafia-like protectors called the Arcana Famiglia safeguard the people from any who would harm them. The members of their organization, having made contracts with tarot cards, each possess different abilities, such as overwhelming strength, invisibility, or the power to see into someone's heart. \n\nMondo, their leader and the \"Papa\" of their family, announces at his birthday party that he will be retiring soon. He plans to hold the Arcana Duello, a competition that, if won, will grant the winner the title of Papa and any wish they desire. But there is more at stake than just a title: Mondo also decides that the winner will marry his daughter, Felicit\u00e0. Enraged by this, the strong-willed Felicit\u00e0 decides to enter the competition herself, in order to make her own way in the world. As Felicit\u00e0 battles for her freedom, her competitors battle for her heart.\n\n[Written by MAL Rewrite]",
+    "plot": "​On the island of Regalo, a group of supernaturally powered mafia-like protectors called the Arcana Famiglia safeguard the people from any who would harm them. The members of their organization, having made contracts with tarot cards, each possess different abilities, such as overwhelming strength, invisibility, or the power to see into someone's heart. \n\nMondo, their leader and the \"Papa\" of their family, announces at his birthday party that he will be retiring soon. He plans to hold the Arcana Duello, a competition that, if won, will grant the winner the title of Papa and any wish they desire. But there is more at stake than just a title: Mondo also decides that the winner will marry his daughter, Felicità. Enraged by this, the strong-willed Felicità decides to enter the competition herself, in order to make her own way in the world. As Felicità battles for her freedom, her competitors battle for her heart.\n\n[Written by MAL Rewrite]",
     "source": "jikan"
   },
   "attack on titan season 1": {
@@ -1542,7 +1542,7 @@
     "title": "Shingeki no Kyojin Season 2",
     "year": 2017,
     "rating": 8.53,
-    "plot": "For centuries, humanity has been hunted by giant, mysterious predators known as the Titans. Three mighty walls\u2014Wall Maria, Rose, and Sheena\u2014provided peace and protection for humanity for over a hundred years. That peace, however, was shattered when the Colossal Titan and Armored Titan appeared and destroyed the outermost wall, Wall Maria. Forced to retreat behind Wall Rose, humanity waited with bated breath for the Titans to reappear and destroy their safe haven once more.\n\nIn Shingeki no Kyojin Season 2, Eren Yeager and others of the 104th Training Corps have just begun to become full members of the Survey Corps. As they ready themselves to face the Titans once again, their preparations are interrupted by the invasion of Wall Rose\u2014but all is not as it seems as more mysteries are unraveled. As the Survey Corps races to save the wall, they uncover more about the invading Titans and the dark secrets of their own members.\n\n[Written by MAL Rewrite]",
+    "plot": "For centuries, humanity has been hunted by giant, mysterious predators known as the Titans. Three mighty walls—Wall Maria, Rose, and Sheena—provided peace and protection for humanity for over a hundred years. That peace, however, was shattered when the Colossal Titan and Armored Titan appeared and destroyed the outermost wall, Wall Maria. Forced to retreat behind Wall Rose, humanity waited with bated breath for the Titans to reappear and destroy their safe haven once more.\n\nIn Shingeki no Kyojin Season 2, Eren Yeager and others of the 104th Training Corps have just begun to become full members of the Survey Corps. As they ready themselves to face the Titans once again, their preparations are interrupted by the invasion of Wall Rose—but all is not as it seems as more mysteries are unraveled. As the Survey Corps races to save the wall, they uncover more about the invading Titans and the dark secrets of their own members.\n\n[Written by MAL Rewrite]",
     "source": "jikan"
   },
   "attack on titan season xl": {
@@ -1598,7 +1598,7 @@
     "title": "Katsute Mahou Shoujo to Aku wa Tekitai shiteita.",
     "year": 2024,
     "rating": 7.56,
-    "plot": "An evil army is leading a ground invasion against Earth, and their Lieutenant Shun Miller is determined to wreak havoc upon the populace. Miller's ruthless reputation strikes fear even into the hearts of his own subordinates, making him the perfect leader of a charge against a city protected by a powerful magical girl, Byakuya Mimori. However, his attack comes to a halt on the day of their first encounter\u2014because he unexpectedly falls in love with Byakuya at first sight!\n\nOvercome by Byakuya's adorably delicate innocence, Miller begins to shower her with gifts and kindness. But Miller soon learns that Byakuya's Angel\u2014the cat-like familiar who turned her into a magical girl\u2014has been exploiting and manipulating her all along. This discovery solidifies Miller's resolve to ensure Byakuya goes on to lead a happier life, but as the war continues, they wonder if their blossoming affection can overcome the reality of their differences.\n\n[Written by MAL Rewrite]",
+    "plot": "An evil army is leading a ground invasion against Earth, and their Lieutenant Shun Miller is determined to wreak havoc upon the populace. Miller's ruthless reputation strikes fear even into the hearts of his own subordinates, making him the perfect leader of a charge against a city protected by a powerful magical girl, Byakuya Mimori. However, his attack comes to a halt on the day of their first encounter—because he unexpectedly falls in love with Byakuya at first sight!\n\nOvercome by Byakuya's adorably delicate innocence, Miller begins to shower her with gifts and kindness. But Miller soon learns that Byakuya's Angel—the cat-like familiar who turned her into a magical girl—has been exploiting and manipulating her all along. This discovery solidifies Miller's resolve to ensure Byakuya goes on to lead a happier life, but as the war continues, they wonder if their blossoming affection can overcome the reality of their differences.\n\n[Written by MAL Rewrite]",
     "source": "jikan"
   },
   "blade runner twenty forty nine": {
@@ -1657,7 +1657,7 @@
     "plot": "Aru Hi no Oshitari\nHyoutei Academy's Yuushi Oshitari is fed up with being the unfunny one in his daily life. He sets out to rectify this by getting himself into an idiotic situation, but his tennis club teammates do not seem to understand what he is doing.\n\nAru Hi no Oshitari 2\nEven though he is supposed to be the humorous one, Kenya Oshitari is concerned that his recent \"manzai\" jokes have not been landing. Luckily for him, his teammate from the Shitenhouji Middle School tennis team, Hikaru Zaizen, has come to save the day by replacing him as the laughing stock in the jokes.\n\n[Written by MAL Rewrite]",
     "source": "jikan"
   },
-  "fate stay night [heaven\u2019s feel] iii. spring song": {
+  "fate stay night [heaven’s feel] iii. spring song": {
     "title": "Fate/stay night",
     "year": 2006,
     "rating": 7.27,
@@ -1681,22 +1681,22 @@
   "halo four forward unto dawn": {
     "title": "Si Dian Ban",
     "year": "1964",
-    "rating": null,
-    "plot": null,
+    "rating": "N/A",
+    "plot": "No plot available",
     "source": "jikan"
   },
   "harry potter and the deathly hallows part i": {
     "title": "Lupin III",
     "year": 1971,
     "rating": 7.62,
-    "plot": "Ars\u00e8ne Lupin III is the grandson of world-famous thief Ars\u00e8ne Lupin, and he's living up to his grandfather's memory as a high-profile thief himself. Due to his infamy, Lupin III attracts the attention of the persistent Inspector Zenigata of the ICPO, as well as rival criminals. Lupin III's criminal lifestyle even seeps into his love life. The main woman in Lupin III's world is femme fatale Fujiko Mine, who Lupin III can never tell is working with or against him. Follow Lupin and his gunman partner Daisuke Jigen on their quest to own the world\uff0dor at least the valuable bits!",
+    "plot": "Arsène Lupin III is the grandson of world-famous thief Arsène Lupin, and he's living up to his grandfather's memory as a high-profile thief himself. Due to his infamy, Lupin III attracts the attention of the persistent Inspector Zenigata of the ICPO, as well as rival criminals. Lupin III's criminal lifestyle even seeps into his love life. The main woman in Lupin III's world is femme fatale Fujiko Mine, who Lupin III can never tell is working with or against him. Follow Lupin and his gunman partner Daisuke Jigen on their quest to own the world－or at least the valuable bits!",
     "source": "jikan"
   },
   "harry potter and the deathly hallows part two": {
     "title": "Kidou Senshi Gundam UC: One of Seventy Two",
     "year": "2013",
     "rating": 6.32,
-    "plot": "U.C. 0095.12.03 The Neo Zeon remnants known as the Sleeves conduct a performance test on a certain new type of mobile suit in a debris sector. Having gotten wind of this intel, two warships head for the debris sector. One ship is a Earth Federation Forces warship. The other ship is an Anaheim Electronics testing ship. On board the Federation Forces battleship, a newly constructed Unicorn Gundam Unit 3 awaited its time to sortie\u2026\n\n(Source: Zeonic Scanlations)",
+    "plot": "U.C. 0095.12.03 The Neo Zeon remnants known as the Sleeves conduct a performance test on a certain new type of mobile suit in a debris sector. Having gotten wind of this intel, two warships head for the debris sector. One ship is a Earth Federation Forces warship. The other ship is an Anaheim Electronics testing ship. On board the Federation Forces battleship, a newly constructed Unicorn Gundam Unit 3 awaited its time to sortie…\n\n(Source: Zeonic Scanlations)",
     "source": "jikan"
   },
   "harry potter and the sorcerers stone": {
@@ -1710,7 +1710,7 @@
     "title": "Kidou Senshi Gundam UC: One of Seventy Two",
     "year": "2013",
     "rating": 6.32,
-    "plot": "U.C. 0095.12.03 The Neo Zeon remnants known as the Sleeves conduct a performance test on a certain new type of mobile suit in a debris sector. Having gotten wind of this intel, two warships head for the debris sector. One ship is a Earth Federation Forces warship. The other ship is an Anaheim Electronics testing ship. On board the Federation Forces battleship, a newly constructed Unicorn Gundam Unit 3 awaited its time to sortie\u2026\n\n(Source: Zeonic Scanlations)",
+    "plot": "U.C. 0095.12.03 The Neo Zeon remnants known as the Sleeves conduct a performance test on a certain new type of mobile suit in a debris sector. Having gotten wind of this intel, two warships head for the debris sector. One ship is a Earth Federation Forces warship. The other ship is an Anaheim Electronics testing ship. On board the Federation Forces battleship, a newly constructed Unicorn Gundam Unit 3 awaited its time to sortie…\n\n(Source: Zeonic Scanlations)",
     "source": "jikan"
   },
   "inside out two": {
@@ -1738,7 +1738,7 @@
     "title": "Jujutsu Kaisen",
     "year": 2020,
     "rating": 8.54,
-    "plot": "Idly indulging in baseless paranormal activities with the Occult Club, high schooler Yuuji Itadori spends his days at either the clubroom or the hospital, where he visits his bedridden grandfather. However, this leisurely lifestyle soon takes a turn for the strange when he unknowingly encounters a cursed item. Triggering a chain of supernatural occurrences, Yuuji finds himself suddenly thrust into the world of Curses\u2014dreadful beings formed from human malice and negativity\u2014after swallowing the said item, revealed to be a finger belonging to the demon Sukuna Ryoumen, the King of Curses.\n\nYuuji experiences first-hand the threat these Curses pose to society as he discovers his own newfound powers. Introduced to the Tokyo Prefectural Jujutsu High School, he begins to walk down a path from which he cannot return\u2014the path of a Jujutsu sorcerer.\n\n[Written by MAL Rewrite]",
+    "plot": "Idly indulging in baseless paranormal activities with the Occult Club, high schooler Yuuji Itadori spends his days at either the clubroom or the hospital, where he visits his bedridden grandfather. However, this leisurely lifestyle soon takes a turn for the strange when he unknowingly encounters a cursed item. Triggering a chain of supernatural occurrences, Yuuji finds himself suddenly thrust into the world of Curses—dreadful beings formed from human malice and negativity—after swallowing the said item, revealed to be a finger belonging to the demon Sukuna Ryoumen, the King of Curses.\n\nYuuji experiences first-hand the threat these Curses pose to society as he discovers his own newfound powers. Introduced to the Tokyo Prefectural Jujutsu High School, he begins to walk down a path from which he cannot return—the path of a Jujutsu sorcerer.\n\n[Written by MAL Rewrite]",
     "source": "jikan"
   },
   "kimetsu no yaiba mugen resshahen": {
@@ -1766,7 +1766,7 @@
     "title": "Naruto",
     "year": 2002,
     "rating": 8.01,
-    "plot": "Twelve years ago, a colossal demon fox terrorized the world. During the monster's attack on the Hidden Leaf Village, the Hokage\u2014the village's leader and most powerful ninja\u2014sacrifices himself to seal the beast inside a newborn, relieving civilization from destruction while dooming the baby to a lonely life.\n\nNow, after years of being shunned and bullied, Naruto Uzumaki pesters the village with elaborate pranks and vandalism. Despite these antics, he works hard to achieve his dream: to become the Hokage and earn the acknowledgement of those who have mistreated him for his entire life. Naruto joins Team 7, a ninja squad made up of two of his peers\u2014prodigy Sasuke Uchiha and clever Sakura Haruno.\n\nUnder the aloof Kakashi Hatake's leadership, Team 7 takes on a series of difficult missions, forcing its members to grow in strength and comradery despite their many differences. Naruto strives to stand out in his rivalry with Sasuke and earn the romantic affection of Sakura. But as the trio brush against danger and death, their tragic pasts threaten to tear them apart.\n\n[Written by MAL Rewrite]",
+    "plot": "Twelve years ago, a colossal demon fox terrorized the world. During the monster's attack on the Hidden Leaf Village, the Hokage—the village's leader and most powerful ninja—sacrifices himself to seal the beast inside a newborn, relieving civilization from destruction while dooming the baby to a lonely life.\n\nNow, after years of being shunned and bullied, Naruto Uzumaki pesters the village with elaborate pranks and vandalism. Despite these antics, he works hard to achieve his dream: to become the Hokage and earn the acknowledgement of those who have mistreated him for his entire life. Naruto joins Team 7, a ninja squad made up of two of his peers—prodigy Sasuke Uchiha and clever Sakura Haruno.\n\nUnder the aloof Kakashi Hatake's leadership, Team 7 takes on a series of difficult missions, forcing its members to grow in strength and comradery despite their many differences. Naruto strives to stand out in his rivalry with Sasuke and earn the romantic affection of Sakura. But as the trio brush against danger and death, their tragic pasts threaten to tear them apart.\n\n[Written by MAL Rewrite]",
     "source": "jikan"
   },
   "nineteen seventeen": {
@@ -1822,14 +1822,14 @@
     "title": "Regalia: The Three Sacred Stars",
     "year": 2016,
     "rating": 5.97,
-    "plot": "In the kingdom of Rimgarde, two mysterious giant robots begin a duel that erases nearly all human life before they disappear. Twelve years later, the young empress of Enastoria, Yuinshiel Asteria, works tirelessly to maintain both her authority and the support of her citizens. But the peace of Enastoria is threatened when survivors of Rimgarde arrive. Armed with giant robots called Regalia Gear, they look for Yuinshiel's adopted sister, Rena. The latter is forced to reveal herself as not just a Regalia Gear wielder, but a real \"Regalia\"\u2014a human capable of transforming into a giant robot\u2014and the culprit behind the fall of Rimgarde.\n\nSuddenly caught up in an international dispute, Yuinshiel must preserve the security of her country while also protecting Rena from those who wish to abuse her powers. However, by fighting for her sister, Yuinshiel risks triggering the same calamity that once destroyed Rimgarde. Amid such a precarious situation, the two girls push their bond to its limits as they fight not only for themselves but for the world's safety as well.\n\n[Written by MAL Rewrite]",
+    "plot": "In the kingdom of Rimgarde, two mysterious giant robots begin a duel that erases nearly all human life before they disappear. Twelve years later, the young empress of Enastoria, Yuinshiel Asteria, works tirelessly to maintain both her authority and the support of her citizens. But the peace of Enastoria is threatened when survivors of Rimgarde arrive. Armed with giant robots called Regalia Gear, they look for Yuinshiel's adopted sister, Rena. The latter is forced to reveal herself as not just a Regalia Gear wielder, but a real \"Regalia\"—a human capable of transforming into a giant robot—and the culprit behind the fall of Rimgarde.\n\nSuddenly caught up in an international dispute, Yuinshiel must preserve the security of her country while also protecting Rena from those who wish to abuse her powers. However, by fighting for her sister, Yuinshiel risks triggering the same calamity that once destroyed Rimgarde. Amid such a precarious situation, the two girls push their bond to its limits as they fight not only for themselves but for the world's safety as well.\n\n[Written by MAL Rewrite]",
     "source": "jikan"
   },
   "spider man two": {
     "title": "Xin Yu Gong Yu Shan",
     "year": "2020",
-    "rating": null,
-    "plot": null,
+    "rating": "N/A",
+    "plot": "No plot available",
     "source": "jikan"
   },
   "spiderman far from home": {
@@ -1913,7 +1913,7 @@
     "title": "Sword Art Online: Alicization",
     "year": 2018,
     "rating": 7.57,
-    "plot": "The Soul Translator is a state-of-the-art full-dive interface which interacts with the user's Fluctlight\u2014the technological equivalent of a human soul\u2014and fundamentally differs from the orthodox method of sending signals to the brain. The private institute Rath aims to perfect their creation by enlisting the aid of Sword Art Online survivor Kazuto Kirigaya. He works there as a part-time employee to test the system's capabilities in the Underworld: the fantastical realm generated by the Soul Translator. As per the confidentiality contract, any memories created by the machine in the virtual world are wiped upon returning to the real world. Kazuto can only vaguely recall a single name, Alice, which provokes a sense of unease when mentioned in reality.\n\nWhen Kazuto escorts Asuna Yuuki home one evening, they chance upon a familiar foe. Kazuto is mortally wounded in the ensuing fight and loses consciousness. When he comes to, he discovers that he has made a full-dive into the Underworld with seemingly no way to escape. He sets off on a quest, seeking a way back to the physical world once again.\n\n[Written by MAL Rewrite]",
+    "plot": "The Soul Translator is a state-of-the-art full-dive interface which interacts with the user's Fluctlight—the technological equivalent of a human soul—and fundamentally differs from the orthodox method of sending signals to the brain. The private institute Rath aims to perfect their creation by enlisting the aid of Sword Art Online survivor Kazuto Kirigaya. He works there as a part-time employee to test the system's capabilities in the Underworld: the fantastical realm generated by the Soul Translator. As per the confidentiality contract, any memories created by the machine in the virtual world are wiped upon returning to the real world. Kazuto can only vaguely recall a single name, Alice, which provokes a sense of unease when mentioned in reality.\n\nWhen Kazuto escorts Asuna Yuuki home one evening, they chance upon a familiar foe. Kazuto is mortally wounded in the ensuing fight and loses consciousness. When he comes to, he discovers that he has made a full-dive into the Underworld with seemingly no way to escape. He sets off on a quest, seeking a way back to the physical world once again.\n\n[Written by MAL Rewrite]",
     "source": "jikan"
   },
   "sword art online v5": {
@@ -1927,14 +1927,14 @@
     "title": "Sword Art Online: Progressive Movie - Hoshi Naki Yoru no Aria",
     "year": "2021",
     "rating": 7.95,
-    "plot": "Excelling socially and academically, Asuna Yuuki is on track to ace her high school entrance exams. Her friend and classmate, Misumi \"Mito\" Tozawa, advises her to take a short break from studying and join her on the launch day of Sword Art Online (SAO)\u2014the highly anticipated online virtual reality multiplayer game. Asuna accepts her offer and soon meets her in the game.\n\nIn a cruel twist of fate, Asuna, Mito, and every other player logged into SAO find themselves trapped in the game permanently. The only way out is to clear all one hundred floors of the game, and to make matters worse, dying inside the game will kill the player in real life. With SAO now turned into a nightmare death trap, Asuna and other gamers\u2014such as the lone swordsman Kazuto \"Kirito\" Kirigaya\u2014must adapt and survive, all whilst attempting to beat the unforgiving competition to the top.\n\n[Written by MAL Rewrite]",
+    "plot": "Excelling socially and academically, Asuna Yuuki is on track to ace her high school entrance exams. Her friend and classmate, Misumi \"Mito\" Tozawa, advises her to take a short break from studying and join her on the launch day of Sword Art Online (SAO)—the highly anticipated online virtual reality multiplayer game. Asuna accepts her offer and soon meets her in the game.\n\nIn a cruel twist of fate, Asuna, Mito, and every other player logged into SAO find themselves trapped in the game permanently. The only way out is to clear all one hundred floors of the game, and to make matters worse, dying inside the game will kill the player in real life. With SAO now turned into a nightmare death trap, Asuna and other gamers—such as the lone swordsman Kazuto \"Kirito\" Kirigaya—must adapt and survive, all whilst attempting to beat the unforgiving competition to the top.\n\n[Written by MAL Rewrite]",
     "source": "jikan"
   },
   "ten cloverfield lane": {
     "title": "Ten",
     "year": "1971",
     "rating": 5.19,
-    "plot": "Independent animation by Suzuki Shiniichi (\u9234\u6728\u4f38\u4e00).",
+    "plot": "Independent animation by Suzuki Shiniichi (鈴木伸一).",
     "source": "jikan"
   },
   "terminator two judgement day": {
@@ -1975,8 +1975,8 @@
   "tron ares": {
     "title": "Miniforce Animaltron",
     "year": 2021,
-    "rating": null,
-    "plot": null,
+    "rating": "N/A",
+    "plot": "No plot available",
     "source": "jikan"
   },
   "twelve angry men": {
@@ -1997,21 +1997,21 @@
     "title": "Kidou Senshi Gundam UC: One of Seventy Two",
     "year": "2013",
     "rating": 6.32,
-    "plot": "U.C. 0095.12.03 The Neo Zeon remnants known as the Sleeves conduct a performance test on a certain new type of mobile suit in a debris sector. Having gotten wind of this intel, two warships head for the debris sector. One ship is a Earth Federation Forces warship. The other ship is an Anaheim Electronics testing ship. On board the Federation Forces battleship, a newly constructed Unicorn Gundam Unit 3 awaited its time to sortie\u2026\n\n(Source: Zeonic Scanlations)",
+    "plot": "U.C. 0095.12.03 The Neo Zeon remnants known as the Sleeves conduct a performance test on a certain new type of mobile suit in a debris sector. Having gotten wind of this intel, two warships head for the debris sector. One ship is a Earth Federation Forces warship. The other ship is an Anaheim Electronics testing ship. On board the Federation Forces battleship, a newly constructed Unicorn Gundam Unit 3 awaited its time to sortie…\n\n(Source: Zeonic Scanlations)",
     "source": "jikan"
   },
   "vinland saga 2ver2": {
     "title": "Vinland Saga",
     "year": 2019,
     "rating": 8.77,
-    "plot": "Young Thorfinn grew up listening to the stories of old sailors that had traveled the ocean and reached the place of legend, Vinland. It's said to be warm and fertile, a place where there would be no need for fighting\u2014not at all like the frozen village in Iceland where he was born, and certainly not like his current life as a mercenary. War is his home now. Though his father once told him, \"You have no enemies, nobody does. There is nobody who it's okay to hurt,\" as he grew, Thorfinn knew that nothing was further from the truth.\n\nThe war between England and the Danes grows worse with each passing year. Death has become commonplace, and the viking mercenaries are loving every moment of it. Allying with either side will cause a massive swing in the balance of power, and the vikings are happy to make names for themselves and take any spoils they earn along the way. Among the chaos, Thorfinn must take his revenge and kill Askeladd, the man who murdered his father. The only paradise for the vikings, it seems, is the era of war and death that rages on.\n\n[Written by MAL Rewrite]",
+    "plot": "Young Thorfinn grew up listening to the stories of old sailors that had traveled the ocean and reached the place of legend, Vinland. It's said to be warm and fertile, a place where there would be no need for fighting—not at all like the frozen village in Iceland where he was born, and certainly not like his current life as a mercenary. War is his home now. Though his father once told him, \"You have no enemies, nobody does. There is nobody who it's okay to hurt,\" as he grew, Thorfinn knew that nothing was further from the truth.\n\nThe war between England and the Danes grows worse with each passing year. Death has become commonplace, and the viking mercenaries are loving every moment of it. Allying with either side will cause a massive swing in the balance of power, and the vikings are happy to make names for themselves and take any spoils they earn along the way. Among the chaos, Thorfinn must take his revenge and kill Askeladd, the man who murdered his father. The only paradise for the vikings, it seems, is the era of war and death that rages on.\n\n[Written by MAL Rewrite]",
     "source": "jikan"
   },
   "vinland saga2": {
     "title": "Vinland Saga",
     "year": 2019,
     "rating": 8.77,
-    "plot": "Young Thorfinn grew up listening to the stories of old sailors that had traveled the ocean and reached the place of legend, Vinland. It's said to be warm and fertile, a place where there would be no need for fighting\u2014not at all like the frozen village in Iceland where he was born, and certainly not like his current life as a mercenary. War is his home now. Though his father once told him, \"You have no enemies, nobody does. There is nobody who it's okay to hurt,\" as he grew, Thorfinn knew that nothing was further from the truth.\n\nThe war between England and the Danes grows worse with each passing year. Death has become commonplace, and the viking mercenaries are loving every moment of it. Allying with either side will cause a massive swing in the balance of power, and the vikings are happy to make names for themselves and take any spoils they earn along the way. Among the chaos, Thorfinn must take his revenge and kill Askeladd, the man who murdered his father. The only paradise for the vikings, it seems, is the era of war and death that rages on.\n\n[Written by MAL Rewrite]",
+    "plot": "Young Thorfinn grew up listening to the stories of old sailors that had traveled the ocean and reached the place of legend, Vinland. It's said to be warm and fertile, a place where there would be no need for fighting—not at all like the frozen village in Iceland where he was born, and certainly not like his current life as a mercenary. War is his home now. Though his father once told him, \"You have no enemies, nobody does. There is nobody who it's okay to hurt,\" as he grew, Thorfinn knew that nothing was further from the truth.\n\nThe war between England and the Danes grows worse with each passing year. Death has become commonplace, and the viking mercenaries are loving every moment of it. Allying with either side will cause a massive swing in the balance of power, and the vikings are happy to make names for themselves and take any spoils they earn along the way. Among the chaos, Thorfinn must take his revenge and kill Askeladd, the man who murdered his father. The only paradise for the vikings, it seems, is the era of war and death that rages on.\n\n[Written by MAL Rewrite]",
     "source": "jikan"
   },
   "x men three": {
@@ -2034,5 +2034,586 @@
     "rating": 7.07,
     "plot": "Aru Hi no Oshitari\nHyoutei Academy's Yuushi Oshitari is fed up with being the unfunny one in his daily life. He sets out to rectify this by getting himself into an idiotic situation, but his tennis club teammates do not seem to understand what he is doing.\n\nAru Hi no Oshitari 2\nEven though he is supposed to be the humorous one, Kenya Oshitari is concerned that his recent \"manzai\" jokes have not been landing. Luckily for him, his teammate from the Shitenhouji Middle School tennis team, Hikaru Zaizen, has come to save the day by replacing him as the laughing stock in the jokes.\n\n[Written by MAL Rewrite]",
     "source": "jikan"
+  },
+  "alien earth": {
+    "title": "Alien: Earth",
+    "year": "2025–",
+    "rating": "N/A",
+    "plot": "When a mysterious space vessel crash-lands on Earth, a young woman and a ragtag group of tactical soldiers make a fateful discovery that puts them face-to-face with the planet's greatest threat.",
+    "source": "omdb"
+  },
+  "avatar the last airbender 2005": {
+    "title": "Quanzhi Gaoshou: Dianfeng Rongyao",
+    "year": "2019",
+    "rating": 8.07,
+    "plot": "Two years ago, Glory started out as just another MMORPG, but its real-world influence has grown as more countries begin to recognize esports as an official sport. Now, in China, arrangements are being made to hold the first professional league of Glory, culminating in the Glory Championship.\n\nFriends Ye Qiu and Su Muqiu both aspire to make a career out of esports. However, due to personal reasons, Ye Qiu has been hesitant until now to chase his dream onto the national stage. When the two boys finally agree to form their own team, they are supported by Tao Xuan, their boss and the owner of Excellent Era internet cafe, after which they name their team. And so, Team Excellent Era sets their sights on defeating all opponents who stand in their way of reaching the ultimate summit of Glory.\n\n[Written by MAL Rewrite]",
+    "source": "jikan"
+  },
+  "avatar fire and ash": {
+    "title": "Avatar: Fire and Ash",
+    "year": "2025",
+    "rating": "N/A",
+    "plot": "Jake and Neytiri's family grapples with grief after Neteyam's death, encountering a new, aggressive Na'vi tribe, the Ash People, who are led by the fiery Varang, as the conflict on Pandora escalates and a new moral focus emerges.",
+    "source": "omdb"
+  },
+  "avp alien vs predator": {
+    "title": "Skirt no Naka wa Kedamono deshita.",
+    "year": "2017",
+    "rating": 5.44,
+    "plot": "Shizuka Kominami is a shy college student who, despite her bashful demeanor, attends a college mixer. There, she meets Ryou Kirishima, a beautiful, confident woman whom she quickly befriends. After leaving the mixer together, the two spend the night talking and drinking. But when an inebriated Shizuka ends up at Ryou's apartment, one thing leads to another, and she finds herself being seduced by her new friend. And what's more, Ryou is actually a crossdressing man!\n\nAfter a passion-filled night, Shizuka awakens to a note left by Ryou, promising more erotic moments between them later. How will Shizuka's newfound relationship with Ryou unfold?\n\n[Written by MAL Rewrite]",
+    "source": "jikan"
+  },
+  "baby driver": {
+    "title": "Baby Driver",
+    "year": "2017",
+    "rating": "7.5",
+    "plot": "Coerced into working for a crime boss, a young getaway driver must face the music when a doomed heist threatens his life, love, and freedom.",
+    "source": "omdb"
+  },
+  "black mirror": {
+    "title": "Black Mirror",
+    "year": "2011–",
+    "rating": "8.7",
+    "plot": "Featuring stand-alone dramas -- sharp, suspenseful, satirical tales that explore techno-paranoia -- \"Black Mirror\" is a contemporary reworking of \"The Twilight Zone\" with stories that tap into the collective unease about the moder...",
+    "source": "omdb"
+  },
+  "brothers": {
+    "title": "Brothers",
+    "year": "2009",
+    "rating": "7.1",
+    "plot": "While on tour in Afghanistan, Sam's helicopter is shot down and he is presumed dead. Back home, it is his screw-up brother who looks after the family. Sam does return, but with a lot of excess baggage.",
+    "source": "omdb"
+  },
+  "chronicles of narnia prince caspian": {
+    "title": "The Chronicles of Narnia: Prince Caspian",
+    "year": "2008",
+    "rating": "6.5",
+    "plot": "The Pevensie siblings return to Narnia, where they are enlisted to once again help ward off an evil king and restore the rightful heir to the land's throne, Prince Caspian.",
+    "source": "omdb"
+  },
+  "chronicles of narnia the lion the witch and the wardrobe": {
+    "title": "The Chronicles of Narnia: The Lion, the Witch and the Wardrobe",
+    "year": "2005",
+    "rating": "6.9",
+    "plot": "While playing, Lucy and her siblings find a wardrobe that lands them in a mystical place called Narnia. Here they realize that it was fated and they must now unite with Aslan to defeat an evil queen.",
+    "source": "omdb"
+  },
+  "chronicles of narnia the voyage of the dawn treader": {
+    "title": "The Chronicles of Narnia: The Voyage of the Dawn Treader",
+    "year": "2010",
+    "rating": "6.3",
+    "plot": "Lucy and Edmund Pevensie return to Narnia with their cousin Eustace where they meet up with Prince Caspian for a trip across the sea aboard the royal ship The Dawn Treader. Along the way they encounter dragons, dwarves, merfolk, a...",
+    "source": "omdb"
+  },
+  "crazy stupid love": {
+    "title": "Crazy, Stupid, Love",
+    "year": "2022",
+    "rating": "N/A",
+    "plot": "Surya goes to Yogyakarta by night bus and sits next to Asti, whom he saves from pranksters. Unexpectedly, the meeting with Asti changes Surya's life, both in love and in his relationship with his parents.",
+    "source": "omdb"
+  },
+  "darkest hour": {
+    "title": "Darkest Hour",
+    "year": "2017",
+    "rating": "7.4",
+    "plot": "In May 1940, the fate of World War II hangs on Winston Churchill, who must decide whether to negotiate with Adolf Hitler, or fight on knowing that it could mean the end of the British Empire.",
+    "source": "omdb"
+  },
+  "demon slayer mugen train": {
+    "title": "Demon Slayer: Kimetsu no Yaiba - The Movie: Mugen Train",
+    "year": "2020",
+    "rating": "8.2",
+    "plot": "After his family was brutally murdered and his sister turned into a demon, Tanjiro Kamado's journey as a demon slayer began. Tanjiro and his comrades embark on a new mission aboard the Mugen Train, on track to despair.",
+    "source": "omdb"
+  },
+  "end of watch": {
+    "title": "End of Watch",
+    "year": "2012",
+    "rating": "7.6",
+    "plot": "Shot documentary-style, this film follows the daily grind of two young police officers in LA who are partners and close friends.",
+    "source": "omdb"
+  },
+  "ex machina": {
+    "title": "Ex Machina",
+    "year": "2014",
+    "rating": "7.7",
+    "plot": "A young programmer is selected to participate in a ground-breaking experiment in synthetic intelligence by evaluating the human qualities of a highly advanced humanoid A.I.",
+    "source": "omdb"
+  },
+  "f one": {
+    "title": "F",
+    "year": 1988,
+    "rating": 6.77,
+    "plot": "Gunma Akagi, a teenager from the countryside, frequently causes a ruckus with his turbocharged tractor, much to the chagrin of his father, aspiring politician Souichirou Akagi, who urges the family to set a good example to ensure his success.\n\nOne night, while Gunma is driving his tractor on the highway with his best friend Tamotsu Oishi, the two are suddenly overtaken by a speeding car. Gunma interprets this as a challenge and tries to outpace his opponent, only to fail in a spectacular fashion. The defeat sparks a fire within him, and Gunma becomes determined to win against this mysterious foe at all costs. Soon after, he leaves the peaceful countryside behind and moves to the bustling city, aiming to become the next Formula One star!\n\n[Written by MAL Rewrite]",
+    "source": "jikan"
+  },
+  "fantastic beasts and where to find them": {
+    "title": "Fantastic Beasts and Where to Find Them",
+    "year": "2016",
+    "rating": "7.2",
+    "plot": "In 1926, magizoologist Newt Scamander arrives in New York during his worldwide tour to research and rescue magical creatures as something mysterious leaves trails of destruction in the city, threatening to expose the wizarding world.",
+    "source": "omdb"
+  },
+  "fantastic beasts the crimes of grindelwald": {
+    "title": "Fantastic Beasts: The Crimes of Grindelwald",
+    "year": "2018",
+    "rating": "6.5",
+    "plot": "Gellert Grindelwald plans to raise an army of wizards to rule over non-magical beings. In response, Newt Scamander's former professor, Albus Dumbledore, seeks his help to stop him.",
+    "source": "omdb"
+  },
+  "fantastic beasts the secrets of dumbledore": {
+    "title": "Fantastic Beasts: The Secrets of Dumbledore",
+    "year": "2022",
+    "rating": "6.2",
+    "plot": "Albus Dumbledore knows that Gellert Grindelwald is moving to take control of the wizarding world. Unable to stop him alone, he asks Newt Scamander to lead an intrepid team on a dangerous mission.",
+    "source": "omdb"
+  },
+  "fate stay night heavens feel iii spring song": {
+    "title": "Fate/stay night",
+    "year": 2006,
+    "rating": 7.27,
+    "plot": "After a mysterious inferno kills his family, Shirou is saved and adopted by Kiritsugu Emiya, who teaches him the ways of magic and justice.\n\nOne night, years after Kiritsugu's death, Shirou is cleaning at school, when he finds himself caught in the middle of a deadly encounter between two superhumans known as Servants. During his attempt to escape, the boy is caught by one of the Servants and receives a life-threatening injury. Miraculously, he survives, but the same Servant returns to finish what he started. In desperation, Shirou summons a Servant of his own, a knight named Saber. The two must now participate in the Fifth Holy Grail War, a battle royale of seven Servants and the mages who summoned them, with the grand prize being none other than the omnipotent Holy Grail itself.\n\nFate/stay night follows Shirou as he struggles to find the fine line between a hero and a killer, his ideals clashing with the harsh reality around him. Will the boy become a hero like his foster father, or die trying?\n\n[Written by MAL Rewrite]",
+    "source": "jikan"
+  },
+  "fighter": {
+    "title": "Fighter",
+    "year": "2024",
+    "rating": "6.2",
+    "plot": "A reckless yet brilliant squadron leader and his team of elite fighter pilots face mortal dangers and inner demons as they unite for a deadly mission.",
+    "source": "omdb"
+  },
+  "fury": {
+    "title": "Fury",
+    "year": "2014",
+    "rating": "7.6",
+    "plot": "A grizzled tank commander makes tough decisions as he and his crew fight their way across Germany in April, 1945.",
+    "source": "omdb"
+  },
+  "antman and the wasp": {
+    "title": "antman and the wasp",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "none"
+  },
+  "get out": {
+    "title": "Get Out",
+    "year": "2017",
+    "rating": "7.8",
+    "plot": "A young African-American visits his white girlfriend's parents for the weekend, where his simmering uneasiness about their reception of him eventually reaches a boiling point.",
+    "source": "omdb"
+  },
+  "good time": {
+    "title": "Good Time",
+    "year": "2017",
+    "rating": "7.3",
+    "plot": "After a botched bank robbery lands his younger brother in prison, Connie Nikas embarks on a twisted odyssey through New York City's underworld to get his brother Nick out of jail.",
+    "source": "omdb"
+  },
+  "guardians of the galaxy": {
+    "title": "Guardians of the Galaxy",
+    "year": "2014",
+    "rating": "8.0",
+    "plot": "A group of intergalactic criminals must pull together to stop a fanatical warrior with plans to purge the universe.",
+    "source": "omdb"
+  },
+  "guardians of the galaxy vol three": {
+    "title": "Biao Ren: Blades of the Guardians",
+    "year": "2023",
+    "rating": 7.56,
+    "plot": "An extraordinary guard walks in the desert of the western regions escaping the slaughter by the government. He took a surveillance assignment bound for the Chang capital. The task was thought of as something simple, but in reality it is a path full of crises and dangers. Here begins a journey that will affect the fate of the world.",
+    "source": "jikan"
+  },
+  "guardians of the galaxy vol two": {
+    "title": "Biao Ren: Blades of the Guardians",
+    "year": "2023",
+    "rating": 7.56,
+    "plot": "An extraordinary guard walks in the desert of the western regions escaping the slaughter by the government. He took a surveillance assignment bound for the Chang capital. The task was thought of as something simple, but in reality it is a path full of crises and dangers. Here begins a journey that will affect the fate of the world.",
+    "source": "jikan"
+  },
+  "hacksaw ridge": {
+    "title": "Hacksaw Ridge",
+    "year": "2016",
+    "rating": "8.1",
+    "plot": "World War II American Army Medic Desmond T. Doss, serving during the Battle of Okinawa, refuses to kill people and becomes the first man in American history to receive the Medal of Honor without firing a shot.",
+    "source": "omdb"
+  },
+  "happy feet two": {
+    "title": "Happy Feet Two",
+    "year": "2011",
+    "rating": "5.8",
+    "plot": "Mumble's son, Erik, is struggling to realize his talents in the Emperor Penguin world. Meanwhile, Mumble and his family and friends discover a new threat their home -- one that will take everyone working together to save them.",
+    "source": "omdb"
+  },
+  "happy feet": {
+    "title": "Happy Feet",
+    "year": "2006",
+    "rating": "6.4",
+    "plot": "Into the world of the Emperor Penguins, who find their soul mates through song, a penguin is born who cannot sing. But he can tap dance something fierce!",
+    "source": "omdb"
+  },
+  "haunting of hill house": {
+    "title": "The Haunting of Hill House",
+    "year": "2018",
+    "rating": "8.5",
+    "plot": "Flashing between past and present, a fractured family confronts haunting memories of their old home and the terrifying events that drove them from it.",
+    "source": "omdb"
+  },
+  "hunger games catching fire": {
+    "title": "The Hunger Games: Catching Fire",
+    "year": "2013",
+    "rating": "7.5",
+    "plot": "Katniss Everdeen and Peeta Mellark become targets of the Capitol after their victory in the 74th Hunger Games sparks a rebellion in the Districts of Panem.",
+    "source": "omdb"
+  },
+  "hunger games mockingjay part one": {
+    "title": "The Hunger Games: Mockingjay - Part 1 Official Teaser - Together As One",
+    "year": "2014",
+    "rating": "N/A",
+    "plot": "N/A",
+    "source": "omdb"
+  },
+  "hunger games mockingjay part two": {
+    "title": "hunger games mockingjay part two",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "none"
+  },
+  "jurassic world fallen kingdom 2": {
+    "title": "Xiao Gongzhu Ai Wei La Yu Shenmi Wangguo 2",
+    "year": "2020",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "jikan"
+  },
+  "jurassic world rebirth": {
+    "title": "Jurassic World: Rebirth",
+    "year": "2025",
+    "rating": "6.2",
+    "plot": "Five years post-Jurassic World: Dominion (2022), an expedition braves isolated equatorial regions to extract DNA from three massive prehistoric creatures for a groundbreaking medical breakthrough.",
+    "source": "omdb"
+  },
+  "justice league": {
+    "title": "Justice League",
+    "year": "2017",
+    "rating": "6.0",
+    "plot": "Steppenwolf and his Parademons return after eons to capture Earth. However, Batman seeks the help of Wonder Woman to recruit and assemble Flash, Cyborg and Aquaman to fight the powerful new enemy.",
+    "source": "omdb"
+  },
+  "legend of the guardians the owls of gahoole": {
+    "title": "The Legend of Heroes: Sen no Kiseki - Northern War",
+    "year": 2023,
+    "rating": 5.63,
+    "plot": "For many years following the North Ambrian Disaster, North Ambria has been known as the poorest region in Zemuria. After the state suffered a major loss due to the mysterious Salt Pale turning citizens and buildings into salt, the economy has never truly recovered. Out of necessity to secure foreign investment for the state, the former state military has turned into a group of mercenaries known as the Northern Jaegers.\n\nWishing to join the largest group of mercenaries on the continent, Lavian \"Lavi\" Winslet, a promising rookie, enlists with the Northern Jaegers. Although she has only been with them for half a year, the reserved but capable Lavi Winslet is well respected by her peers. When Lavi and her team are tasked with gathering information regarding the Imperial Hero of Erebonia—a new threat to the state—she discovers that there may be more to the continent's intricate politics than meets the eye.\n\n[Written by MAL Rewrite]",
+    "source": "jikan"
+  },
+  "lone survivor": {
+    "title": "Lone Survivor",
+    "year": "2013",
+    "rating": "7.5",
+    "plot": "Marcus Luttrell and his team set out on a mission to capture or kill notorious Taliban leader Ahmad Shah, in late June 2005. Marcus and his team are left to fight for their lives in one of the most valiant efforts of modern warfare.",
+    "source": "omdb"
+  },
+  "looper": {
+    "title": "Looper",
+    "year": "2012",
+    "rating": "7.4",
+    "plot": "In 2074, when the mob wants to get rid of someone, the target is sent into the past, where a hired gun awaits - someone like Joe - who one day learns the mob wants to 'close the loop' by sending back Joe's future self for assassin...",
+    "source": "omdb"
+  },
+  "man of steel": {
+    "title": "Man of Steel",
+    "year": "2013",
+    "rating": "7.1",
+    "plot": "An alien child is evacuated from his dying world and sent to Earth to live among humans. His peace is threatened when other survivors of his home planet invade Earth.",
+    "source": "omdb"
+  },
+  "mandalorian": {
+    "title": "The Mandalorian",
+    "year": "2019–",
+    "rating": "8.6",
+    "plot": "The travels of a lone bounty hunter in the outer reaches of the galaxy, far from the authority of the New Republic.",
+    "source": "omdb"
+  },
+  "mission impossible dead reckoning part one": {
+    "title": "Mission Impossible: Dead Reckoning Part One (2023)",
+    "year": "2023",
+    "rating": "N/A",
+    "plot": "ON THE 127th EPISODE OF BOMB SQUAD MOVIE NIGHT: Tanner, Tim and Austin discuss the 2023 spy action film from Christopher McQuarrie, Mission Impossible: Dead Reckoning Part One. Mission Impossible has become one of Hollywood's most...",
+    "source": "omdb"
+  },
+  "mission impossible fallout": {
+    "title": "Mission: Impossible - Fallout",
+    "year": "2018",
+    "rating": "7.7",
+    "plot": "A group of terrorists plans to detonate three plutonium cores for a simultaneous nuclear attack on different cities. Ethan Hunt, along with his IMF team, sets out to stop the carnage.",
+    "source": "omdb"
+  },
+  "mission impossible rogue nation": {
+    "title": "Mission: Impossible - Rogue Nation",
+    "year": "2015",
+    "rating": "7.4",
+    "plot": "Ethan and his team take on their most impossible mission yet when they have to eradicate an international rogue organization as highly skilled as they are and committed to destroying the IMF.",
+    "source": "omdb"
+  },
+  "mission impossible the reckoning": {
+    "title": "Mission: Impossible - The Final Reckoning",
+    "year": "2025",
+    "rating": "7.4",
+    "plot": "Our lives are the sum of our choices. Tom Cruise is Ethan Hunt in Mission: Impossible - The Final Reckoning.",
+    "source": "omdb"
+  },
+  "mission impossible ghost protocol": {
+    "title": "Mission: Impossible Ghost Protocol Special Feature - Soaring in Dubai",
+    "year": "2011",
+    "rating": "7.0",
+    "plot": "Agent Ethan Hunt and his elite team go underground after a bombing implicates the IMF as terrorists. While trying to clear their name, the team uncovers a plot to start a nuclear war. Now to save the world, they must use every hig...",
+    "source": "omdb"
+  },
+  "mission impossible iii": {
+    "title": "Mission: Impossible III",
+    "year": "2006",
+    "rating": "6.9",
+    "plot": "IMF agent Ethan Hunt comes into conflict with a dangerous and sadistic arms dealer who threatens his life and his fiancée in response.",
+    "source": "omdb"
+  },
+  "mission impossible two": {
+    "title": "Backkom Mission Impossible",
+    "year": "2008",
+    "rating": 5.7,
+    "plot": "A pastiche to Mission Impossible featuring Super Backkom trying to turn on a television which showed the Backkom Song!! (as listed in the Backkom Specials entry).",
+    "source": "jikan"
+  },
+  "mission impossible": {
+    "title": "Mission: Impossible",
+    "year": "1996",
+    "rating": "7.2",
+    "plot": "An American agent, under false suspicion of disloyalty, must discover and expose the real spy without the help of his organization.",
+    "source": "omdb"
+  },
+  "my hero academia heroes rising": {
+    "title": "My Hero Academia: Heroes Rising",
+    "year": "2019",
+    "rating": "7.8",
+    "plot": "A group of youths aspiring to become professional superheroes, fight in a world full of people with abilities, also known as quirks. Deku and his fellow classmates from Hero Academy face Nine, the strongest villain yet.",
+    "source": "omdb"
+  },
+  "nightcrawler": {
+    "title": "Nightcrawler",
+    "year": "2014",
+    "rating": "7.8",
+    "plot": "A petty thief desperate for work muscles into the world of crime journalism and becomes the star of his own story as he blurs the line between observer and participant.",
+    "source": "omdb"
+  },
+  "nocturnal animals": {
+    "title": "Nocturnal Animals",
+    "year": "2016",
+    "rating": "7.4",
+    "plot": "A wealthy art gallery owner is haunted by her ex-husband's novel, a violent thriller she interprets as a symbolic revenge tale.",
+    "source": "omdb"
+  },
+  "nonstop": {
+    "title": "Nonstop",
+    "year": "2000–",
+    "rating": "8.3",
+    "plot": "College students' hilarious everyday adventures with friends and family. Each season features a brand new cast portraying relatable campus stories.",
+    "source": "omdb"
+  },
+  "predator badlands": {
+    "title": "Predator: Badlands",
+    "year": "2025",
+    "rating": "N/A",
+    "plot": "A young Predator outcast from his clan finds an unlikely ally on his journey in search of the ultimate adversary.",
+    "source": "omdb"
+  },
+  "predator killer of killers": {
+    "title": "Predator: Killer of Killers",
+    "year": "2025",
+    "rating": "7.5",
+    "plot": "Three of the fiercest warriors in human history become prey to the ultimate killer of killers.",
+    "source": "omdb"
+  },
+  "social network": {
+    "title": "The Social Network",
+    "year": "2010",
+    "rating": "7.8",
+    "plot": "As Harvard student Mark Zuckerberg creates the social networking site that would become known as Facebook, he is sued by the twins who claimed he stole their idea and by the co-founder who was later squeezed out of the business.",
+    "source": "omdb"
+  },
+  "southpaw": {
+    "title": "Southpaw",
+    "year": "2015",
+    "rating": "7.3",
+    "plot": "After a fatal incident sends him on a rampant path of destruction, a champion boxer fights to get custody of his daughter and revive his professional career.",
+    "source": "omdb"
+  },
+  "spiderman across the spiderverse": {
+    "title": "spiderman across the spiderverse",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "none"
+  },
+  "spiderman into the spiderverse": {
+    "title": "spiderman into the spiderverse",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "none"
+  },
+  "star wars episode iv a new hope": {
+    "title": "Star Wars Episode IV: A New Hope",
+    "year": "2008",
+    "rating": "N/A",
+    "plot": "N/A",
+    "source": "omdb"
+  },
+  "star wars rebels": {
+    "title": "Star Wars: Rebels",
+    "year": "2014–2018",
+    "rating": "8.1",
+    "plot": "The crew of the spaceship Ghost defends those who cannot fight for themselves against the Empire, providing the spark for a rebellion.",
+    "source": "omdb"
+  },
+  "star wars tales of the empire": {
+    "title": "Star Wars: Tales of the Empire",
+    "year": "2024",
+    "rating": "7.0",
+    "plot": "A vengeful young woman and a former Jedi navigate the ruthless Galactic Empire during different eras, their divergent choices shaping their fates in a rapidly changing galaxy.",
+    "source": "omdb"
+  },
+  "star wars tales of the underworld": {
+    "title": "Star Wars: Tales of the Underworld",
+    "year": "2025–",
+    "rating": "N/A",
+    "plot": "A Star Wars animated series about the galaxy's criminal underworld. Asajj Ventress, a former assassin, flees with a new ally, while Cad Bane confronts his past when meeting an old friend turned Marshal.",
+    "source": "omdb"
+  },
+  "star wars visions": {
+    "title": "Star Wars: Visions",
+    "year": "2021–",
+    "rating": "7.0",
+    "plot": "An anthology of animated shorts from around the world celebrating the mythology of Star Wars through unique cultural perspectives.",
+    "source": "omdb"
+  },
+  "steve jobs": {
+    "title": "Steve Jobs",
+    "year": "2015",
+    "rating": "7.2",
+    "plot": "Steve Jobs takes us behind the scenes of the digital revolution, to paint a portrait of the man at its epicenter. The story unfolds backstage at three iconic product launches, ending in 1998 with the unveiling of the iMac.",
+    "source": "omdb"
+  },
+  "suicide squad 1": {
+    "title": "Isekai Suicide Squad",
+    "year": 2024,
+    "rating": 6.41,
+    "plot": "The Joker and his best girl, Harley Quinn, are tearing through the streets of Gotham with sacks full of cash and the law in hot pursuit. Unfortunately for them, though the jester manages to escape, the night ends with Harley being captured by a mysterious, katana-wielding woman.\n\nMeanwhile, Amanda Waller, the head of the government security organization A.R.G.U.S., has commandeered a team of supervillains for a ruthless mission into another world. After losing contact with the first suicide squad sent through the portal, Amanda sends Deadshot, Peacemaker, Clayface, King Shark, and Harley as replacements. However, shortly after entering the portal, their helicopter crashes in the middle of a battle between horse-mounted troops and vicious orcs.\n\nWith all of the accompanying A.R.G.U.S. members dead on impact, the villains break free of their shackles and rampage through the army of orcs, unwittingly aiding the human soldiers—only to be rewarded with imprisonment. Now bound by magic-infused shackles, Harley and company must hurry back to the portal they came from, or else the bombs A.R.G.U.S. implanted in their necks will detonate.\n\n[Written by MAL Rewrite]",
+    "source": "jikan"
+  },
+  "superbad": {
+    "title": "Superbad",
+    "year": "2007",
+    "rating": "7.6",
+    "plot": "Two co-dependent high school seniors are forced to deal with separation anxiety after their plan to stage a booze-soaked party goes awry.",
+    "source": "omdb"
+  },
+  "taken two": {
+    "title": "Maken-Ki! Two",
+    "year": 2014,
+    "rating": 6.14,
+    "plot": "Takeru continues his education at Tenbi Academy as part of the newly formed Security Committee. As a team with the other members, they battle unscrupulous individuals who use their Maken for evil purposes. In the meantime, his libido and the conflicting romantic interests of the girls surrounding him complicate matters considerably.\n\n(Source: ANN)",
+    "source": "jikan"
+  },
+  "tales of the jedi": {
+    "title": "Star Wars: Tales of the Jedi",
+    "year": "2022",
+    "rating": "8.1",
+    "plot": "Animated shorts that feature Jedi from the prequel era.",
+    "source": "omdb"
+  },
+  "the amazing spider man 2": {
+    "title": "The Amazing Spider-Man 2",
+    "year": "2014",
+    "rating": "6.6",
+    "plot": "When New York is put under siege by Oscorp, it is up to Spider-Man to save the city he swore to protect as well as his loved ones.",
+    "source": "omdb"
+  },
+  "the amazing spider man": {
+    "title": "The Amazing Spider-Man",
+    "year": "2012",
+    "rating": "6.9",
+    "plot": "After Peter Parker is bitten by a genetically altered spider, he gains newfound, spider-like powers and ventures out to save the city from the machinations of a mysterious reptilian foe.",
+    "source": "omdb"
+  },
+  "the fighter": {
+    "title": "The Fighter",
+    "year": "2010",
+    "rating": "7.8",
+    "plot": "Based on the story of Micky Ward, a fledgling boxer who tries to escape the shadow of his more famous but troubled older boxing brother and get his own shot at greatness.",
+    "source": "omdb"
+  },
+  "the legend of korra": {
+    "title": "The Legend of Korra",
+    "year": "2012–2014",
+    "rating": "8.3",
+    "plot": "Avatar Korra fights to keep Republic City safe from the evil forces of both the physical and spiritual worlds.",
+    "source": "omdb"
+  },
+  "the office us": {
+    "title": "OL Kaizou Kouza",
+    "year": "1990",
+    "rating": 5.54,
+    "plot": "Inspired by Drop Dead! Stupid Office Ladies, a column in Monthly Gendai magazine.\n\n(Source: AniDB)",
+    "source": "jikan"
+  },
+  "thegodfather": {
+    "title": "TheGodFather",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "none"
+  },
+  "uncut gems": {
+    "title": "Uncut Gems",
+    "year": "2019",
+    "rating": "7.4",
+    "plot": "With his debts mounting and angry collectors closing in, a fast-talking New York City jeweler risks everything in hope of staying afloat and alive.",
+    "source": "omdb"
+  },
+  "war of the worlds": {
+    "title": "War of the Worlds",
+    "year": "2005",
+    "rating": "6.6",
+    "plot": "An alien invasion threatens the future of humanity. The catastrophic nightmare is depicted through the eyes of one American family fighting for survival.",
+    "source": "omdb"
+  },
+  "weapons": {
+    "title": "Weapons",
+    "year": "2007",
+    "rating": "4.8",
+    "plot": "Weapons presents a series of brutal, seemingly random youth-related killings over the course of a weekend in a typical small town in America,and tragically reveals how they are all interrelated.",
+    "source": "omdb"
+  },
+  "wicked for good": {
+    "title": "Wicked: For Good",
+    "year": "2025",
+    "rating": "N/A",
+    "plot": "Follows Elphaba, the future Wicked Witch of the West and her relationship with Glinda, the Good Witch of the North. The second of a two-part feature film adaptation of the Broadway musical.",
+    "source": "omdb"
+  },
+  "widows": {
+    "title": "Widows",
+    "year": "2018",
+    "rating": "6.8",
+    "plot": "Four women with nothing in common except a debt left behind by their dead husbands' criminal activities take fate into their own hands and conspire to forge a future on their own terms.",
+    "source": "omdb"
+  },
+  "zero dark thirty": {
+    "title": "Zero Dark Thirty",
+    "year": "2012",
+    "rating": "7.4",
+    "plot": "A chronicle of the decade-long hunt for al-Qaeda terrorist leader Osama bin Laden after the September 2001 attacks, and his death at the hands of the Navy S.E.A.L.s Team 6 in May 2011.",
+    "source": "omdb"
   }
 }
