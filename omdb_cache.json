@@ -2622,5 +2622,33 @@
     "rating": "6.7",
     "plot": "UNSC Cadet Thomas Lasky must conquer his inner fears and join forces with super-soldier John-117 to take down a massive faction of the Covenant.",
     "source": "omdb"
+  },
+  "band of brothers": {
+    "title": "Band of Brothers",
+    "year": "2001",
+    "rating": "9.4",
+    "plot": "The story of Easy Company of the U.S. Army 101st Airborne Division and their mission in World War II Europe, from Operation Overlord to V-J Day.",
+    "source": "omdb"
+  },
+  "it welcome to derry": {
+    "title": "IT: Welcome to Derry",
+    "year": "2025–",
+    "rating": "N/A",
+    "plot": "It will follow the events in 1962 , the time leading up to the events of the first film based in 1989 of the Stephen King \" It \" series.",
+    "source": "omdb"
+  },
+  "long walk": {
+    "title": "Long Walk",
+    "year": "2010",
+    "rating": "N/A",
+    "plot": "Two twelve year old Hispanic male best friends from East Los Angeles discover new feelings toward each other as they walk home one hot summer day after school.",
+    "source": "omdb"
+  },
+  "nacho libre": {
+    "title": "Nacho Libre",
+    "year": "2006",
+    "rating": "5.9",
+    "plot": "Berated all his life by those around him, a monk follows his dream and dons a mask to moonlight as a Luchador (Mexican wrestler).",
+    "source": "omdb"
   }
 }
