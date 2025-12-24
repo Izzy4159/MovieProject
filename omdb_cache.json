@@ -2650,5 +2650,61 @@
     "rating": "5.9",
     "plot": "Berated all his life by those around him, a monk follows his dream and dons a mask to moonlight as a Luchador (Mexican wrestler).",
     "source": "omdb"
+  },
+  "creature from the black lagoon": {
+    "title": "Creature from the Black Lagoon",
+    "year": "1954",
+    "rating": "6.9",
+    "plot": "A strange prehistoric beast lurks in the depths of the Amazonian jungle. A group of scientists try to capture the animal and bring it back to civilization for study.",
+    "source": "omdb"
+  },
+  "frankenstein": {
+    "title": "Frankenstein",
+    "year": "1931",
+    "rating": "7.7",
+    "plot": "Dr Henry Frankenstein is obsessed with assembling a living being from parts of several exhumed corpses.",
+    "source": "omdb"
+  },
+  "inception": {
+    "title": "Inception",
+    "year": "2010",
+    "rating": "8.8",
+    "plot": "A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O., but his tragic past may doom the project and his team to disaster.",
+    "source": "omdb"
+  },
+  "italian job": {
+    "title": "Italian Job",
+    "year": "2009",
+    "rating": "N/A",
+    "plot": "N/A",
+    "source": "omdb"
+  },
+  "sixth sense": {
+    "title": "Sixth Sense",
+    "year": "2020–",
+    "rating": "8.5",
+    "plot": "Only one fake. An unpredictable sixth-sensory dazzling variety in which six cast members search for fakes that are more real than the real ones hidden in the real world.",
+    "source": "omdb"
+  },
+  "smashing machine": {
+    "title": "The Smashing Machine",
+    "year": "2025",
+    "rating": "6.5",
+    "plot": "The story of mixed-martial arts and UFC champion, Mark Kerr.",
+    "source": "omdb"
+  },
+  "star wars the mandalorian and grogu": {
+    "title": "Star Wars: The Mandalorian and Grogu",
+    "year": "2026",
+    "rating": "N/A",
+    "plot": "Once a lone bounty hunter, Mandalorian Din Djarin and his apprentice Grogu embark on an exciting new Star Wars adventure.",
+    "source": "omdb"
+  },
+  "us": {
+    "title": "Us",
+    "year": "2019",
+    "rating": "6.8",
+    "plot": "In order to get away from their busy lives, the Wilson family takes a vacation to Santa Cruz, California. At night, four strangers break into Adelaide's childhood home. The family is shocked to find out that the intruders look lik...",
+    "source": "omdb"
   }
 }

@@ -48,5 +48,22 @@
   </div>
 
   <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+
+  <!-- 🔻 ADDED: graceful shutdown + failsafe timer -->
+  <script>
+    const SHUTDOWN_URL = "/shutdown";
+    const FAILSAFE_MINUTES = 5;
+
+    // Attempt shutdown when browser/tab is closed
+    window.addEventListener("beforeunload", function () {
+      navigator.sendBeacon(SHUTDOWN_URL);
+    });
+
+    // Failsafe shutdown after 5 minutes
+    setTimeout(() => {
+      fetch(SHUTDOWN_URL, { method: "POST" });
+    }, FAILSAFE_MINUTES * 60 * 1000);
+  </script>
+
 </body>
 </html>
