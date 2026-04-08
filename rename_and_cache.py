@@ -32,7 +32,7 @@ from pathlib import Path
 # ------------------------------------------------------------------ #
 POSTERS_DIR = Path("posters")
 CACHE_FILE  = Path("omdb_cache.json")
-OMDB_API_KEY = "444ceefe"
+OMDB_API_KEY = "ab30acaf"
 
 IGNORE_WORDS = {"ver", "xlg", "poster", "final", "intl", "cover"}
 _YEAR_RE     = re.compile(r'\((\d{4})\)')

@@ -27,6 +27,34 @@
   <!-- Search -->
   <input type="text" id="searchBar" class="search-bar" placeholder="Search titles…" />
 
+  <!-- Upload button -->
+  <button class="upload-btn" onclick="openUploadModal()">+ Upload Poster</button>
+
+  <!-- Upload modal -->
+  <div id="upload-modal" class="upload-overlay">
+    <div class="upload-card">
+      <h2>Upload New Poster</h2>
+      <form id="upload-form">
+        <label>
+          Image file (jpg, png, webp)
+          <input type="file" id="upload-file" accept=".jpg,.jpeg,.png,.webp" required />
+        </label>
+        <label>
+          Movie / Show Title
+          <input type="text" id="upload-title" placeholder="e.g. Inception" required />
+        </label>
+        <label>
+          Year (optional)
+          <input type="text" id="upload-year" placeholder="e.g. 2010" maxlength="4" />
+        </label>
+        <div class="upload-actions">
+          <button type="button" class="pager-btn" onclick="closeUploadModal()">Cancel</button>
+          <button type="submit" class="pager-btn primary">Upload</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Grid -->
   <div class="grid-container">
     {{ grid_items | safe }}

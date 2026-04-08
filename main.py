@@ -27,7 +27,7 @@ app.register_blueprint(main_bp)
 # -----------------------
 # The browser page sends a /heartbeat ping every 3 seconds.
 # If we don't hear from it for more than TIMEOUT seconds, we shut down.
-TIMEOUT = 8  # seconds — long enough to survive a page reload
+TIMEOUT = 12  # seconds — long enough to survive a page reload
 
 _last_heartbeat = time.time()
 
@@ -40,7 +40,7 @@ def heartbeat():
 def _watchdog():
     """Background thread: shuts down if browser goes silent."""
     # Give the browser a moment to actually open before we start watching
-    time.sleep(6)
+    time.sleep(20)
     while True:
         time.sleep(2)
         if time.time() - _last_heartbeat > TIMEOUT:

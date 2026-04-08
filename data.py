@@ -7,7 +7,7 @@ import difflib
 import time
 
 # 🔒 Hardcoded for your local use
-OMDB_API_KEY = "444ceefe"
+OMDB_API_KEY = "ab30acaf"
 CACHE_FILE = Path("omdb_cache.json")
 
 # Load cache on startup

@@ -1,11 +1,4 @@
 {
-  "2001 a space odyssey 1968": {
-    "title": "2001: A Space Odyssey",
-    "year": "1968",
-    "rating": "8.3",
-    "plot": "When a mysterious artifact is uncovered on the Moon, a spacecraft manned by two humans and one supercomputer is sent to Jupiter to find its origins.",
-    "source": "omdb"
-  },
   "a house of dynamite 2025": {
     "title": "A House of Dynamite",
     "year": "2025",
@@ -4324,5 +4317,166 @@
     "rating": "N/A",
     "plot": "No plot available",
     "source": "none"
+  },
+  "f1 2025": {
+    "title": "F1: The Movie (2025)",
+    "year": "2025",
+    "rating": "N/A",
+    "plot": "A spoiler filled discussion on the 2025 racing blockbuster from director Joseph Kosinski and starring Brad Pitt, Damson Idris, Javier Bardem and Kerry Condon.",
+    "source": "omdb"
+  },
+  "widows 2018": {
+    "title": "Widows",
+    "year": "2018",
+    "rating": "6.8",
+    "plot": "Four women with nothing in common except a debt left behind by their dead husbands' criminal activities take fate into their own hands and conspire to forge a future on their own terms.",
+    "source": "omdb"
+  },
+  "wind river 2017": {
+    "title": "Wind River",
+    "year": "2017",
+    "rating": "7.7",
+    "plot": "A wildlife officer helps a rookie FBI agent investigate the murder of a young woman on an American Indian reservation in Wyoming.",
+    "source": "omdb"
+  },
+  "witch": {
+    "title": "The Chronicles of Narnia: The Lion, the Witch and the Wardrobe",
+    "year": "2005",
+    "rating": "6.9",
+    "plot": "While playing, Lucy and her siblings find a wardrobe that lands them in a mystical place called Narnia. Here they realize that it was fated and they must now unite with Aslan to defeat an evil queen.",
+    "source": "omdb"
+  },
+  "witcher": {
+    "title": "The Witcher",
+    "year": "2019–",
+    "rating": "7.9",
+    "plot": "Geralt of Rivia, a solitary monster hunter, struggles to find his place in a world where people often prove more wicked than beasts.",
+    "source": "omdb"
+  },
+  "wolf man 2025": {
+    "title": "Wolf Man",
+    "year": "2025",
+    "rating": "5.6",
+    "plot": "A family at a remote farmhouse is attacked by an unseen animal, but as the night stretches on, the father begins to transform into something unrecognizable.",
+    "source": "omdb"
+  },
+  "wolverine 2011": {
+    "title": "Wolverine",
+    "year": "2011",
+    "rating": "6.1",
+    "plot": "Logan is asked by his old friend, a cop from Japan, to help him take down Shingen Yashida's crime syndicate and save Mariko, Logan's lost love, from forced marriage arranged by her father Shingen. Yukio, a female assassin, helps him.",
+    "source": "omdb"
+  },
+  "wolverine": {
+    "title": "Wolverine",
+    "year": "2011",
+    "rating": "6.1",
+    "plot": "Logan is asked by his old friend, a cop from Japan, to help him take down Shingen Yashida's crime syndicate and save Mariko, Logan's lost love, from forced marriage arranged by her father Shingen. Yukio, a female assassin, helps him.",
+    "source": "omdb"
+  },
+  "wonka 2023": {
+    "title": "Wonka",
+    "year": "2023",
+    "rating": "6.9",
+    "plot": "With dreams of opening a shop in a city renowned for its chocolate, a young and poor Willy Wonka discovers that the industry is run by a cartel of greedy chocolatiers.",
+    "source": "omdb"
+  },
+  "world war z 2013": {
+    "title": "World War Z",
+    "year": "2013",
+    "rating": "7.0",
+    "plot": "Former United Nations employee Gerry Lane traverses the world in a race against time to stop a zombie pandemic that is toppling armies and governments and threatens to destroy humanity itself.",
+    "source": "omdb"
+  },
+  "world war z": {
+    "title": "World War Z",
+    "year": "2013",
+    "rating": "7.0",
+    "plot": "Former United Nations employee Gerry Lane traverses the world in a race against time to stop a zombie pandemic that is toppling armies and governments and threatens to destroy humanity itself.",
+    "source": "omdb"
+  },
+  "x men origins wolverine t4 movie special 2009": {
+    "title": "X Men Origins: Wolverine T4 Movie Special",
+    "year": "2009",
+    "rating": "7.4",
+    "plot": "N/A",
+    "source": "omdb"
+  },
+  "x men 2011": {
+    "title": "X-Men: First Class",
+    "year": "2011",
+    "rating": "7.7",
+    "plot": "In the 1960s, superpowered humans Charles Xavier and Erik Lensherr work together to find others like them, but Erik's vengeful pursuit of an ambitious mutant who ruined his life causes a schism to divide them.",
+    "source": "omdb"
+  },
+  "xmen contest of champions part 2 2020": {
+    "title": "Xmen: Contest of Champions Part 2",
+    "year": "2020",
+    "rating": "N/A",
+    "plot": "N/A",
+    "source": "omdb"
+  },
+  "yellowjackets 2021": {
+    "title": "Yellowjackets",
+    "year": "2021–2026",
+    "rating": "7.7",
+    "plot": "A wildly talented girls high school soccer team become the unlucky survivors of a plane crash deep in the Canadian wilderness.",
+    "source": "omdb"
+  },
+  "yellowjackets": {
+    "title": "Yellowjackets",
+    "year": "2021–2026",
+    "rating": "7.7",
+    "plot": "A wildly talented girls high school soccer team become the unlucky survivors of a plane crash deep in the Canadian wilderness.",
+    "source": "omdb"
+  },
+  "your anime sucks sword art online ii 2014": {
+    "title": "Your Anime Sucks: Sword Art Online II",
+    "year": "2014–2015",
+    "rating": "7.0",
+    "plot": "Across 4 episodes Digibro (Conrad Collins) explains to the world where his irrational hatred for Sword Art Online comes from.",
+    "source": "omdb"
+  },
+  "the odyssey 2026 1968": {
+    "title": "The Odyssey (2026)",
+    "year": "1968",
+    "rating": "8.3",
+    "plot": "When a mysterious artifact is uncovered on the Moon, a spacecraft manned by two humans and one supercomputer is sent to Jupiter to find its origins.",
+    "source": "omdb"
+  },
+  "the odyssey 2026": {
+    "title": "The Odyssey",
+    "year": "2026",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "unknown"
+  },
+  "zero dark thirty 2012": {
+    "title": "Zero Dark Thirty",
+    "year": "2012",
+    "rating": "7.4",
+    "plot": "A chronicle of the decade-long hunt for al-Qaeda terrorist leader Osama bin Laden after the September 2001 attacks, and his death at the hands of the Navy S.E.A.L.s Team 6 in May 2011.",
+    "source": "omdb"
+  },
+  "american hustle 2013 2013": {
+    "title": "american hustle 2013",
+    "year": "2013",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "american hustle ver4 xlg 2013": {
+    "title": "american hustle ver4 xlg",
+    "year": "2013",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "american hustle ver6 xlg 2013": {
+    "title": "american hustle ver6 xlg",
+    "year": "2013",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
   }
 }

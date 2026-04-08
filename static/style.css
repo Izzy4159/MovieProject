@@ -312,3 +312,165 @@ body.light-mode .pager-btn.primary {
     transition: none !important;
   }
 }
+
+/* ── Editable title in lightbox ──────────────────────────────────────────── */
+.editable-title {
+  cursor: pointer;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.4);
+  transition: color 0.15s, border-color 0.15s;
+}
+.editable-title:hover {
+  color: #3aa0ff;
+  border-bottom-color: #3aa0ff;
+}
+body.light-mode .editable-title {
+  border-bottom-color: rgba(0, 0, 0, 0.3);
+}
+body.light-mode .editable-title:hover {
+  color: #0056b3;
+  border-bottom-color: #0056b3;
+}
+
+/* Icon buttons inside lightbox (edit / save / cancel) */
+.lb-icon-btn {
+  margin-left: 8px;
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: background 0.15s, transform 0.1s;
+}
+.lb-icon-btn:hover    { background: rgba(255, 255, 255, 0.22); transform: scale(1.06); }
+.lb-icon-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.lb-icon-btn.save-btn   { background: rgba(0, 160, 70, 0.35);  border-color: rgba(0, 200, 80, 0.45); }
+.lb-icon-btn.cancel-btn { background: rgba(200, 40, 40, 0.3);  border-color: rgba(220, 60, 60, 0.45); }
+.lb-icon-btn.save-btn:hover   { background: rgba(0, 160, 70, 0.6); }
+.lb-icon-btn.cancel-btn:hover { background: rgba(200, 40, 40, 0.55); }
+
+body.light-mode .lb-icon-btn {
+  color: #111;
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.18);
+}
+
+/* Inline title edit input */
+.title-edit-input {
+  font-family: inherit;
+  font-size: 1.05em;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #3aa0ff;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  outline: none;
+  min-width: 200px;
+}
+body.light-mode .title-edit-input {
+  background: #fff;
+  color: #111;
+}
+
+/* ── Upload button ───────────────────────────────────────────────────────── */
+.upload-btn {
+  display: inline-block;
+  margin: 0 auto 20px;
+  padding: 10px 22px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 123, 255, 0.5);
+  background: rgba(0, 123, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+.upload-btn:hover {
+  background: rgba(0, 123, 255, 0.35);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 123, 255, 0.35);
+}
+body.light-mode .upload-btn {
+  color: #0056b3;
+  border-color: rgba(0, 86, 179, 0.4);
+  background: rgba(0, 86, 179, 0.08);
+}
+
+/* ── Upload modal ────────────────────────────────────────────────────────── */
+.upload-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  justify-content: center;
+  align-items: center;
+  z-index: 10002;
+  backdrop-filter: blur(4px);
+}
+.upload-overlay.show { display: flex; }
+
+.upload-card {
+  background: #2a2a2a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 32px 36px;
+  width: min(460px, 92%);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  animation: fadeIn 0.2s ease;
+}
+body.light-mode .upload-card {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #111;
+}
+
+.upload-card h2 {
+  margin: 0 0 24px;
+  font-size: 22px;
+  color: #3aa0ff;
+}
+body.light-mode .upload-card h2 { color: #0056b3; }
+
+.upload-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.8);
+}
+body.light-mode .upload-card label { color: #444; }
+
+.upload-card input[type="text"],
+.upload-card input[type="file"] {
+  font-family: inherit;
+  font-size: 15px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.upload-card input[type="text"]:focus { border-color: #3aa0ff; }
+body.light-mode .upload-card input[type="text"],
+body.light-mode .upload-card input[type="file"] {
+  background: #f5f5f5;
+  color: #111;
+  border-color: rgba(0, 0, 0, 0.18);
+}
+
+.upload-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
