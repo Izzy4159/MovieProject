@@ -1147,13 +1147,6 @@
     "plot": "Albus Dumbledore knows that Gellert Grindelwald is moving to take control of the wizarding world. Unable to stop him alone, he asks Newt Scamander to lead an intrepid team on a dangerous mission.",
     "source": "omdb"
   },
-  "fantastic four 2005": {
-    "title": "Fantastic Four",
-    "year": "2005",
-    "rating": "5.7",
-    "plot": "A group of astronauts gain superpowers after a cosmic radiation exposure and must use them to oppose the plans of their enemy, Doctor Victor Von Doom.",
-    "source": "omdb"
-  },
   "fantastic four rise of the silver surfer 2007": {
     "title": "Fantastic Four: Rise of the Silver Surfer",
     "year": "2007",
@@ -4475,6 +4468,132 @@
   "american hustle ver6 xlg 2013": {
     "title": "american hustle ver6 xlg",
     "year": "2013",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "12 angry men 1957": {
+    "title": "12 Angry Men",
+    "year": "1957",
+    "rating": "9.0",
+    "plot": "The jury in a New York City murder trial is frustrated by a single member whose skeptical caution forces them to more carefully consider the evidence before jumping to a hasty verdict.",
+    "source": "omdb"
+  },
+  "2 fast 2 furious": {
+    "title": "2 Fast 2 Furious",
+    "year": "2003",
+    "rating": "5.9",
+    "plot": "Former cop Brian O'Conner is called upon to bust a dangerous criminal and he recruits the help of a former childhood friend and street racer who has a chance to redeem himself.",
+    "source": "omdb"
+  },
+  "28 years later 2025": {
+    "title": "28 Years Later",
+    "year": "2025",
+    "rating": "6.6",
+    "plot": "A group of survivors of the rage virus live on a small island. When one of the group leaves the island on a mission into the mainland, he discovers secrets, wonders, and horrors that have mutated not only the infected but other su...",
+    "source": "omdb"
+  },
+  "28 years later the bone temple 2026": {
+    "title": "28 Years Later: The Bone Temple",
+    "year": "2026",
+    "rating": "7.6",
+    "plot": "As Spike is inducted into Jimmy Crystal's gang on the mainland, Dr. Kelson makes a discovery that could alter the world.",
+    "source": "omdb"
+  },
+  "inside out 2": {
+    "title": "Inside Out 2",
+    "year": "2024",
+    "rating": "7.5",
+    "plot": "A sequel that features Riley entering puberty and experiencing brand new, more complex emotions as a result. As Riley tries to adapt to her teenage years, her old emotions try to adapt to the possibility of being replaced.",
+    "source": "omdb"
+  },
+  "28 years later 2025 v2 2025": {
+    "title": "28 Years Later (2025) v2",
+    "year": "2025",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "unknown"
+  },
+  "28 years later 2025 4 2025": {
+    "title": "28 Years Later (2025) #4",
+    "year": "2025",
+    "rating": "N/A",
+    "plot": "N/A",
+    "source": "omdb"
+  },
+  "mortal kombat two ver26 xlg 2026": {
+    "title": "mortal kombat two ver26 xlg",
+    "year": "2026",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "no country for old men ver4 2007": {
+    "title": "no country for old men ver4",
+    "year": "2007",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "mortal kombat 2 2026 xlg 2026": {
+    "title": "mortal kombat 2 (2026) xlg",
+    "year": "2026",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "mortal kombat 2 (2026) xlg (2026).webp": {
+    "title": "Mortal Kombat X: Rezhim istorii #2",
+    "year": "2015",
+    "rating": "N/A",
+    "plot": "A live stream of the walkthrough of Mortal Kombat X (2015) as well as conversation with fans by Nikolay Gubanov and Valentina Voskresenskaya.",
+    "source": "omdb"
+  },
+  "no country for old men ver4 (2007).webp": {
+    "title": "No Country for Old Men",
+    "year": "2007",
+    "rating": "8.2",
+    "plot": "Violence and mayhem ensue after a hunter stumbles upon the aftermath of a drug deal gone wrong and over two million dollars in cash near the Rio Grande.",
+    "source": "omdb"
+  },
+  "2 Fast 2 Furious (2).webp": {
+    "title": "2 Fast 2 Furious (2)",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "unknown"
+  },
+  "wolf of wall street ver2 xlg (2013).webp": {
+    "title": "wolf of wall street ver2 xlg",
+    "year": "2013",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "Fantastic Four (2025) (2005).webp": {
+    "title": "Fantastic Four (2025)",
+    "year": "2005",
+    "rating": "5.7",
+    "plot": "A group of astronauts gain superpowers after a cosmic radiation exposure and must use them to oppose the plans of their enemy, Doctor Victor Von Doom.",
+    "source": "omdb"
+  },
+  "hunger games sunrise on the reaping (2026).webp": {
+    "title": "hunger games sunrise on the reaping",
+    "year": "2026",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "no country for old men (2007).webp": {
+    "title": "no country for old men",
+    "year": "2007",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "bohemian rhapsody ver2.webp": {
+    "title": "bohemian rhapsody ver2",
+    "year": "N/A",
     "rating": "N/A",
     "plot": "No plot available",
     "source": "uploaded"
