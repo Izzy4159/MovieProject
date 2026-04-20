@@ -41,13 +41,6 @@
     "plot": "The history of the game-changing partnership between a then undiscovered Michael Jordan and Nike's fledgling basketball division which revolutionized the world of sports and culture with the Air Jordan brand.",
     "source": "omdb"
   },
-  "alice in wonderland 2010": {
-    "title": "Alice in Wonderland",
-    "year": "2010",
-    "rating": "6.4",
-    "plot": "Nineteen-year-old Alice returns to the magical world from her childhood adventure, where she reunites with her old friends and learns of her true destiny: to end the Red Queen's reign of terror.",
-    "source": "omdb"
-  },
   "alice in wonderland": {
     "title": "Alice in Wonderland",
     "year": "2010",
@@ -2533,13 +2526,6 @@
     "plot": "Famous film director Guido Contini struggles to find harmony in his professional and personal lives, as he engages in dramatic relationships with his wife, his mistress, his muse, his agent, and his mother.",
     "source": "omdb"
   },
-  "nineteen seventeen": {
-    "title": "Seventeen",
-    "year": "2023",
-    "rating": 6.95,
-    "plot": "A music video for the song Seventeen by YOASOBI.",
-    "source": "jikan"
-  },
   "nocturnal animals 2016": {
     "title": "Nocturnal Animals",
     "year": "2016",
@@ -2573,13 +2559,6 @@
     "year": "2012",
     "rating": 4.98,
     "plot": "Official music video for Kindan no Tasuketsu's song Nosferatu.",
-    "source": "jikan"
-  },
-  "one and three four 2013": {
-    "title": "One and Three Four",
-    "year": "2013",
-    "rating": 5.51,
-    "plot": "A music video for Yoshiharu Abe's song \"One and Three Four.\"",
     "source": "jikan"
   },
   "one hundred twenty seven hours": {
@@ -3422,13 +3401,6 @@
     "plot": "A mentally unstable veteran works as a nighttime taxi driver in New York City, where the perceived decadence and sleaze fuels his urge for violent action.",
     "source": "omdb"
   },
-  "teenage mutant ninja turtles 2014": {
-    "title": "Teenage Mutant Ninja Turtles",
-    "year": "2014",
-    "rating": "5.8",
-    "plot": "When a kingpin threatens New York City, a group of mutated turtle warriors must emerge from the shadows to protect their home.",
-    "source": "omdb"
-  },
   "teenage mutant ninja turtles mutant mayhem 2023": {
     "title": "Teenage Mutant Ninja Turtles: Mutant Mayhem",
     "year": "2023",
@@ -3449,13 +3421,6 @@
     "rating": "5.8",
     "plot": "When a kingpin threatens New York City, a group of mutated turtle warriors must emerge from the shadows to protect their home.",
     "source": "omdb"
-  },
-  "ten cloverfield lane": {
-    "title": "ten cloverfield lane",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "none"
   },
   "terminator 1991": {
     "title": "Terminator",
@@ -4059,13 +4024,6 @@
     "plot": "An ancient struggle between two Cybertronian races, the heroic Autobots and the evil Decepticons, comes to Earth, with a clue to the ultimate power held by a teenager.",
     "source": "omdb"
   },
-  "tribe nine 2022": {
-    "title": "Tribe Nine",
-    "year": "2022",
-    "rating": "5.0",
-    "plot": "In a futuristic era overrun by gangs, a tournament of super-powered baseball takes place to determine which gang shall rule over all.",
-    "source": "omdb"
-  },
   "tron ares 2025": {
     "title": "Tron: Ares",
     "year": "2025",
@@ -4423,13 +4381,6 @@
     "plot": "A wildly talented girls high school soccer team become the unlucky survivors of a plane crash deep in the Canadian wilderness.",
     "source": "omdb"
   },
-  "your anime sucks sword art online ii 2014": {
-    "title": "Your Anime Sucks: Sword Art Online II",
-    "year": "2014–2015",
-    "rating": "7.0",
-    "plot": "Across 4 episodes Digibro (Conrad Collins) explains to the world where his irrational hatred for Sword Art Online comes from.",
-    "source": "omdb"
-  },
   "the odyssey 2026 1968": {
     "title": "The Odyssey (2026)",
     "year": "1968",
@@ -4450,13 +4401,6 @@
     "rating": "7.4",
     "plot": "A chronicle of the decade-long hunt for al-Qaeda terrorist leader Osama bin Laden after the September 2001 attacks, and his death at the hands of the Navy S.E.A.L.s Team 6 in May 2011.",
     "source": "omdb"
-  },
-  "american hustle 2013 2013": {
-    "title": "american hustle 2013",
-    "year": "2013",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
   },
   "american hustle ver4 xlg 2013": {
     "title": "american hustle ver4 xlg",
@@ -4542,13 +4486,6 @@
     "plot": "No plot available",
     "source": "uploaded"
   },
-  "mortal kombat 2 (2026) xlg (2026).webp": {
-    "title": "Mortal Kombat X: Rezhim istorii #2",
-    "year": "2015",
-    "rating": "N/A",
-    "plot": "A live stream of the walkthrough of Mortal Kombat X (2015) as well as conversation with fans by Nikolay Gubanov and Valentina Voskresenskaya.",
-    "source": "omdb"
-  },
   "no country for old men ver4 (2007).webp": {
     "title": "No Country for Old Men",
     "year": "2007",
@@ -4594,6 +4531,335 @@
   "bohemian rhapsody ver2.webp": {
     "title": "bohemian rhapsody ver2",
     "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "alita battle angel xlg.webp": {
+    "title": "alita battle angel xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "mortal kombat two ver24 xlg (2026).webp": {
+    "title": "mortal kombat two ver24 xlg",
+    "year": "2026",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "django unchained ver2 xlg.webp": {
+    "title": "django unchained ver2 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "fight club ver9 xlg.webp": {
+    "title": "fight club ver9 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "hunger games sunrise on the reaping ver2 xlg.webp": {
+    "title": "hunger games sunrise on the reaping ver2 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "django unchained ver9.webp": {
+    "title": "django unchained ver9",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "dallas buyers club xlg.webp": {
+    "title": "dallas buyers club xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "perks of being a wallflower xlg.webp": {
+    "title": "perks of being a wallflower xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "10 cloverfield lane.webp": {
+    "title": "10 cloverfield lane",
+    "year": "2016",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "none"
+  },
+  "10 cloverfield lane v2.webp": {
+    "title": "10 cloverfield lane v2",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "unknown"
+  },
+  "TMNT (2014).webp": {
+    "title": "TMNT",
+    "year": "2014",
+    "rating": "5.8",
+    "plot": "When a kingpin threatens New York City, a group of mutated turtle warriors must emerge from the shadows to protect their home.",
+    "source": "omdb"
+  },
+  "thirteen going on thirty xlg.webp": {
+    "title": "thirteen going on thirty xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "twelve years a slave xlg.webp": {
+    "title": "twelve years a slave xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "star wars the mandalorian and grogu ver4 xlg.webp": {
+    "title": "star wars the mandalorian and grogu ver4 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "split ver2 xlg.webp": {
+    "title": "split ver2 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "star wars the mandalorian and grogu ver9 xlg.webp": {
+    "title": "star wars the mandalorian and grogu ver9 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "Spider-Man 3 (2007) (2013).webp": {
+    "title": "Spider-Man 3 (2007)",
+    "year": "2013",
+    "rating": 5.51,
+    "plot": "A music video for Yoshiharu Abe's song \"One and Three Four.\"",
+    "source": "jikan"
+  },
+  "nineteen_seventeen_ver4_xlg.webp": {
+    "title": "Seventeen",
+    "year": "2023",
+    "rating": 6.94,
+    "plot": "A music video for the song Seventeen by YOASOBI.",
+    "source": "jikan"
+  },
+  "Alice in Wonderland (2010).webp": {
+    "title": "Alice in Wonderland",
+    "year": "2010",
+    "rating": "6.4",
+    "plot": "Nineteen-year-old Alice returns to the magical world from her childhood adventure, where she reunites with her old friends and learns of her true destiny: to end the Red Queen's reign of terror.",
+    "source": "omdb"
+  },
+  "pitt xlg.webp": {
+    "title": "pitt xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "iron man two ver8 xlg.webp": {
+    "title": "iron man two ver8 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "two thousand and one a space odyssey ver8 xlg.webp": {
+    "title": "two thousand and one a space odyssey ver8 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "shining ver2 xlg.webp": {
+    "title": "shining ver2 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "shining ver1 xlg.webp": {
+    "title": "shining ver1 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "wedding crashers ver2 xlg.webp": {
+    "title": "wedding crashers ver2 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "captain america the winter soldier ver13 xlg.webp": {
+    "title": "captain america the winter soldier ver13 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "captain america the winter soldier ver3 xlg.webp": {
+    "title": "captain america the winter soldier ver3 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "captain america the winter soldier ver5 xlg.webp": {
+    "title": "captain america the winter soldier ver5 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "1917.webp": {
+    "title": "1917",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "1917 (2).webp": {
+    "title": "1917 (2)",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "1917 (3).webp": {
+    "title": "1917 (3)",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "District 9 (2022).webp": {
+    "title": "District 9",
+    "year": "2022",
+    "rating": "5.0",
+    "plot": "In a futuristic era overrun by gangs, a tournament of super-powered baseball takes place to determine which gang shall rule over all.",
+    "source": "omdb"
+  },
+  "thor the dark world ver11 xlg.webp": {
+    "title": "thor the dark world ver11 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "thor the dark world ver15 xlg.webp": {
+    "title": "thor the dark world ver15 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "thor the dark world ver6 xlg.webp": {
+    "title": "thor the dark world ver6 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "pulp fiction ver2 xlg.webp": {
+    "title": "pulp fiction ver2 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "captain america civil war ver42 xlg.webp": {
+    "title": "captain america civil war ver42 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "captain america civil war ver3 xlg.webp": {
+    "title": "captain america civil war ver3 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "hokum ver2 xlg.webp": {
+    "title": "hokum ver2 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "thor ragnarok ver9 xlg.webp": {
+    "title": "thor ragnarok ver9 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "thor ragnarok xlg.webp": {
+    "title": "thor ragnarok xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "Avatar Aang 2026.webp": {
+    "title": "Avatar Aang 2026",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "Legend of Korra v2.webp": {
+    "title": "Legend of Korra v2",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "hurt locker ver8 xlg.webp": {
+    "title": "hurt locker ver8 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "hurt locker ver3.webp": {
+    "title": "hurt locker ver3",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "Sword Art Online II (2014–2015).webp": {
+    "title": "Sword Art Online II",
+    "year": "2014–2015",
+    "rating": "7.0",
+    "plot": "Across 4 episodes Digibro (Conrad Collins) explains to the world where his irrational hatred for Sword Art Online comes from.",
+    "source": "omdb"
+  },
+  "american hustle 2013 (2013).webp": {
+    "title": "american hustle",
+    "year": "2013",
     "rating": "N/A",
     "plot": "No plot available",
     "source": "uploaded"

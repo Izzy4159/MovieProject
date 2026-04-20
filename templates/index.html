@@ -172,12 +172,28 @@
   </div>
 
   <!-- ══════════════════════════════════════════════════════
+       LINK METADATA MODAL (compact, opened from grid card chain button)
+  ══════════════════════════════════════════════════════ -->
+  <div id="link-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Link metadata">
+    <div class="link-modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title">Link Metadata</h2>
+        <button class="modal-x" onclick="closeLinkModal()" aria-label="Close">×</button>
+      </div>
+      <div id="link-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
        LIGHTBOX
        Structure: image left | sidebar right (close btn + metadata injected by JS)
   ══════════════════════════════════════════════════════ -->
   <div id="lightbox" aria-modal="true" role="dialog" aria-label="Poster detail">
     <div class="lb-dialog">
-      <img id="lightboxImage" src="" alt="Poster" />
+      <!-- lb-image-wrap: blurred background set by JS; sharp poster on top -->
+      <div class="lb-image-wrap" id="lb-image-wrap">
+        <img id="lightboxImage" src="" alt="Poster" />
+      </div>
       <div class="lb-sidebar">
         <!-- close-x id + class kept exactly — JS wires click and inserts #metadata afterend -->
         <button id="closeLightbox" class="close-x" title="Close (Esc)" aria-label="Close">×</button>

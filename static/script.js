@@ -52,8 +52,16 @@ function _addCardOverlay(item) {
   editBtn.textContent = '\u270f';
   editBtn.addEventListener('click', function (e) { e.stopPropagation(); _startCardEdit(item); });
 
+  const linkBtn = document.createElement('button');
+  linkBtn.className = 'card-btn card-link-btn';
+  linkBtn.title = 'Link metadata';
+  linkBtn.setAttribute('aria-label', 'Link metadata');
+  linkBtn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+  linkBtn.addEventListener('click', function (e) { e.stopPropagation(); openLinkModal(item); });
+
   btnGroup.appendChild(eyeBtn);
   btnGroup.appendChild(editBtn);
+  btnGroup.appendChild(linkBtn);
   item.appendChild(btnGroup);
 
   // Watched badge — always visible when watched
@@ -544,6 +552,32 @@ async function _saveFieldEdit(field, value, valEl, cancelFn) {
       if (field === 'title') _lightboxGridItem.dataset.title = data.title || value;
     }
     showToast(field.charAt(0).toUpperCase() + field.slice(1) + ' updated');
+
+    // When year changes and the filename carries a year tag, also rename the file
+    // so "Movie (oldYear).webp" becomes "Movie (newYear).webp" on disk.
+    if (field === 'year' && _lightboxFilenameYear && _lightboxFilenameYear !== value) {
+      const currentTitle = _lightboxGridItem?.dataset.title || '';
+      if (currentTitle) {
+        try {
+          const renResp = await fetch('/rename', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ old_filename: _lightboxFilename, new_title: currentTitle, year: value }),
+          });
+          const renData = await renResp.json();
+          if (renResp.ok) {
+            _lightboxFilename     = renData.new_filename;
+            _lightboxFilenameYear = value;
+            _setLightboxSrc('/posters/' + renData.new_filename);
+            if (_lightboxGridItem) {
+              _lightboxGridItem.dataset.filename = renData.new_filename;
+              const img = _lightboxGridItem.querySelector('img');
+              if (img) img.src = '/posters/' + renData.new_filename;
+            }
+          }
+        } catch (_) { /* rename failure is non-fatal — metadata was already saved */ }
+      }
+    }
   } catch (err) {
     showToast('Network error', 'error');
   }
@@ -629,6 +663,7 @@ const itemsPerPage = 50;
 let _lightboxFilename     = '';   // decoded filename, e.g. "Alien (1979).webp"
 let _lightboxFilenameYear = '';   // 4-digit year parsed from filename, e.g. "1979"
 let _lightboxGridItem     = null; // reference to the .grid-item DOM node
+let _lightboxZoom         = 1.0;  // current zoom level (0.7–1.3), saved per poster
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function escHtml(s) {
@@ -669,8 +704,8 @@ const _LB_FONTS = [
   { label: 'Raleway',         value: "'Raleway', sans-serif" },
   { label: 'Lato',            value: "'Lato', sans-serif" },
 ];
-const _LB_SIZES = ['13px', '15px', '17px', '20px'];
-const _LB_DEFAULTS = { fontFamily: "'Inter', sans-serif", fontSize: '15px', textColor: '#e0e0e0', bgTint: 36 };
+const _LB_SIZES = ['13px', '15px', '16px', '18px', '21px'];
+const _LB_DEFAULTS = { fontFamily: "'Inter', sans-serif", fontSize: '16px', textColor: '#e0e0e0', bgTint: 36 };
 
 function _loadCustomStyle() {
   try { return JSON.parse(localStorage.getItem('lb_custom') || 'null') || {}; } catch(_) { return {}; }
@@ -688,7 +723,7 @@ function _applyCustomStyle(prefs) {
   const col  = prefs.textColor  || _LB_DEFAULTS.textColor;
   const tint = prefs.bgTint !== undefined ? prefs.bgTint : _LB_DEFAULTS.bgTint;
   meta.style.fontFamily = ff;
-  meta.style.fontSize   = fs;
+  meta.style.setProperty('--lb-fs', fs);  // drives all child font-sizes via CSS var
   meta.style.color      = col;
   sidebar.style.background = 'rgb(' + tint + ',' + tint + ',' + tint + ')';
 }
@@ -706,6 +741,7 @@ function _toggleCustomPanel() {
   const panel = document.createElement('div');
   panel.id = 'lb-custom-panel';
   panel.className = 'lb-custom-panel';
+  panel.style.display = 'block';
 
   const fontOpts = _LB_FONTS.map(function (f) {
     return '<option value="' + escHtml(f.value) + '"' + (f.value === ff ? ' selected' : '') + '>' + escHtml(f.label) + '</option>';
@@ -770,10 +806,45 @@ function _resetCustomPanel() {
   _toggleCustomPanel();
 }
 
+// ── Lightbox helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Set the lightbox image, sync the blurred backdrop, and resize the left panel
+ * to naturally fit the poster's aspect ratio (clamped to 38%–68% of dialog width).
+ */
+function _setLightboxSrc(url) {
+  const img  = document.getElementById('lightboxImage');
+  const wrap = document.getElementById('lb-image-wrap');
+
+  if (!url) {
+    if (img)  { img.src = ''; img.onload = null; img.style.transform = ''; }
+    if (wrap) { wrap.style.backgroundImage = ''; wrap.style.flex = ''; }
+    return;
+  }
+
+  if (wrap) wrap.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
+
+  if (img) {
+    img.onload = function () {
+      if (!wrap || !img.naturalWidth) return;
+      const ratio   = img.naturalWidth / img.naturalHeight;
+      const wrapH   = wrap.clientHeight || (window.innerHeight * 0.88);
+      const dialog  = wrap.parentElement;
+      const dialogW = dialog ? dialog.clientWidth : window.innerWidth * 0.92;
+      // Ideal width: the width the poster would occupy at full height with object-fit:contain
+      const ideal   = ratio * wrapH;
+      const minW    = 0.38 * dialogW;
+      const maxW    = 0.68 * dialogW;
+      const targetW = Math.min(Math.max(ideal, minW), maxW);
+      wrap.style.flex = '0 0 ' + targetW + 'px';
+    };
+    img.src = url;
+  }
+}
+
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 function openLightbox(imageSrc, element) {
-  const lightbox      = document.getElementById('lightbox');
-  const lightboxImage = document.getElementById('lightboxImage');
+  const lightbox = document.getElementById('lightbox');
   const parent        = element.closest('.grid-item');
   const title       = parent?.dataset.title  || 'N/A';
   const displayYear = parent?.dataset.year   || 'N/A';
@@ -792,8 +863,39 @@ function openLightbox(imageSrc, element) {
   _lightboxGridItem     = parent;
 
   document.getElementById('metadata')?.remove();
-  lightboxImage.src = imageSrc;
+  document.getElementById('lb-custom-panel')?.remove();
+  _setLightboxSrc(imageSrc);
   lightbox.classList.add('show');
+
+  // ── Zoom bar ───────────────────────────────────────────────────────────────
+  const wrap = document.getElementById('lb-image-wrap');
+  wrap?.querySelector('.lb-zoom-bar')?.remove();   // clear previous
+  _lightboxZoom = parseFloat(parent?.dataset.zoom || '1.0');
+  if (wrap) {
+    const zoomPct = Math.round(_lightboxZoom * 100);
+    const zbar = document.createElement('div');
+    zbar.className = 'lb-zoom-bar';
+    zbar.innerHTML =
+      '<input type="range" class="lb-zoom-slider" min="70" max="130" step="1" value="' + zoomPct + '" />' +
+      '<span class="lb-zoom-label">' + zoomPct + '%</span>' +
+      '<button class="lb-zoom-save-btn" title="Save zoom for this poster">\uD83D\uDCBE</button>';
+    wrap.appendChild(zbar);
+
+    const img      = document.getElementById('lightboxImage');
+    const slider   = zbar.querySelector('.lb-zoom-slider');
+    const label    = zbar.querySelector('.lb-zoom-label');
+    const saveBtn  = zbar.querySelector('.lb-zoom-save-btn');
+
+    // Apply saved zoom immediately (after onload sets src so the image exists)
+    if (img && _lightboxZoom !== 1.0) img.style.transform = 'scale(' + _lightboxZoom + ')';
+
+    slider.addEventListener('input', function () {
+      _lightboxZoom = parseInt(this.value, 10) / 100;
+      if (img) img.style.transform = _lightboxZoom !== 1.0 ? 'scale(' + _lightboxZoom + ')' : '';
+      label.textContent = this.value + '%';
+    });
+    saveBtn.addEventListener('click', _saveLightboxZoom);
+  }
 
   const personalRating = parseInt(parent?.dataset.personalRating || '0', 10);
 
@@ -812,9 +914,15 @@ function openLightbox(imageSrc, element) {
       '<span class="lb-field-val">' + escHtml(displayYear) + '</span>' +
       '<button class="lb-field-btn" onclick="_startFieldEdit(\'year\')">\u270f</button>' +
     '</div>' +
-    '<div class="lb-field-row">' +
+    '<div class="lb-field-row" id="lb-field-imdb">' +
       '<span class="lb-field-label">IMDb:</span>' +
       '<span class="lb-field-val">' + escHtml(rating) + '</span>' +
+    '</div>' +
+    '<div class="lb-link-row">' +
+      '<button class="lb-link-meta-btn" onclick="openLinkModal(_lightboxGridItem, _applyLinkedMetadata)">' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:-1px;margin-right:4px"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>' +
+        'Link Metadata' +
+      '</button>' +
     '</div>' +
     '<div class="lb-watch-row">' +
       '<button id="lb-btn-watched" class="lb-watch-btn' + (watchStatus === 'watched' ? ' lb-watch-active' : '') + '" onclick="_setWatchStatus(\'watched\')">\u2713 Watched</button>' +
@@ -836,6 +944,9 @@ function openLightbox(imageSrc, element) {
                ' placeholder="Type or select a group\u2026" autocomplete="off" />' +
         '<div id="lb-collection-list" class="lb-collection-list"></div>' +
       '</div>' +
+    '</div>' +
+    '<div class="lb-save-bar">' +
+      '<button class="lb-save-btn" id="lb-save-btn" onclick="lbSaveAll()">Save Changes</button>' +
     '</div>';
   document.getElementById('closeLightbox').insertAdjacentElement('afterend', meta);
   _renderPersonalStars(personalRating);
@@ -847,12 +958,180 @@ function openLightbox(imageSrc, element) {
 function closeLightbox() {
   const lightbox = document.getElementById('lightbox');
   lightbox.classList.remove('show');
-  document.getElementById('lightboxImage').src = '';
+  _setLightboxSrc('');   // clears src, bg-image, and flex width
   document.getElementById('metadata')?.remove();
   document.getElementById('lb-custom-panel')?.remove();
+  _lightboxZoom = 1.0;
   // Reset sidebar bg so it doesn't bleed if custom tint was set
   const sidebar = document.querySelector('.lb-sidebar');
   if (sidebar) sidebar.style.background = '';
+}
+
+// ── Poster zoom ───────────────────────────────────────────────────────────────
+
+async function _saveLightboxZoom() {
+  const saveBtn = document.querySelector('.lb-zoom-save-btn');
+  if (saveBtn) { saveBtn.textContent = '\u2026'; saveBtn.disabled = true; }
+  try {
+    const resp = await fetch('/save_zoom', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ filename: _lightboxFilename, zoom: _lightboxZoom }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      showToast(data.error || 'Failed to save zoom', 'error');
+    } else {
+      // Keep the grid item's data-zoom in sync so re-opens use the new value
+      if (_lightboxGridItem) _lightboxGridItem.dataset.zoom = String(_lightboxZoom);
+      if (saveBtn) {
+        saveBtn.textContent = '\u2713';
+        saveBtn.classList.add('saved');
+        setTimeout(function () {
+          saveBtn.textContent = '\uD83D\uDCBE';
+          saveBtn.classList.remove('saved');
+          saveBtn.disabled = false;
+        }, 1500);
+        return;  // skip the re-enable below
+      }
+      showToast('Zoom saved');
+    }
+  } catch (_) {
+    showToast('Network error', 'error');
+  }
+  if (saveBtn) { saveBtn.textContent = '\uD83D\uDCBE'; saveBtn.disabled = false; }
+}
+
+// ── Save All button ───────────────────────────────────────────────────────────
+async function lbSaveAll() {
+  const btn = document.getElementById('lb-save-btn');
+  if (!btn || btn.classList.contains('saving')) return;
+  btn.classList.add('saving');
+  btn.textContent = 'Saving\u2026';
+
+  const errors = [];
+
+  // 1. Metadata: collect current displayed values and any in-progress edits
+  const titleEl  = document.getElementById('lb-title');
+  const titleIn  = document.getElementById('title-edit-input');
+  const newTitle = (titleIn ? titleIn.value.trim() : titleEl?.textContent.trim()) || '';
+
+  const yearRow  = document.getElementById('lb-field-year');
+  const yearIn   = yearRow?.querySelector('.lb-field-input');
+  const yearVal  = yearRow?.querySelector('.lb-field-val');
+  const newYear  = (yearIn ? yearIn.value.trim() : yearVal?.textContent.trim()) || '';
+
+  const plotRow  = document.getElementById('lb-field-plot');
+  const plotIn   = plotRow?.querySelector('.lb-field-input');
+  const plotVal  = plotRow?.querySelector('.lb-field-val');
+  const newPlot  = (plotIn ? plotIn.value.trim() : plotVal?.textContent.trim()) || '';
+
+  // Fire metadata update (title change also triggers a rename via update_metadata
+  // which handles plot/year; the rename endpoint handles file rename separately)
+  try {
+    const mdResp = await fetch('/update_metadata', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ filename: _lightboxFilename, title: newTitle, year: newYear, plot: newPlot }),
+    });
+    const mdData = await mdResp.json();
+    if (!mdResp.ok) {
+      errors.push(mdData.error || 'Metadata save failed');
+    } else {
+      // Sync grid item data attrs
+      if (_lightboxGridItem) {
+        if (newTitle) _lightboxGridItem.dataset.title = mdData.title || newTitle;
+        if (newYear)  _lightboxGridItem.dataset.year  = mdData.year  || newYear;
+        if (newPlot)  _lightboxGridItem.dataset.plot  = mdData.plot  || newPlot;
+      }
+      // If title changed, also rename file so it matches on disk
+      const displayedTitle = titleEl?.textContent.trim() || '';
+      const titleChanged   = newTitle && newTitle !== displayedTitle;
+      const yearChanged    = newYear && newYear !== _lightboxFilenameYear;
+      if ((titleChanged || yearChanged) && _lightboxFilenameYear) {
+        try {
+          const renResp = await fetch('/rename', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ old_filename: _lightboxFilename, new_title: newTitle || displayedTitle, year: newYear || _lightboxFilenameYear }),
+          });
+          const renData = await renResp.json();
+          if (renResp.ok) {
+            _lightboxFilename     = renData.new_filename;
+            _lightboxFilenameYear = newYear || _lightboxFilenameYear;
+            _setLightboxSrc('/posters/' + renData.new_filename);
+            if (_lightboxGridItem) {
+              _lightboxGridItem.dataset.filename = renData.new_filename;
+              const img = _lightboxGridItem.querySelector('img');
+              if (img) img.src = '/posters/' + renData.new_filename;
+            }
+          }
+        } catch (_) { /* rename failure is non-fatal */ }
+      }
+      // Commit any open text fields back to display mode
+      if (titleIn) cancelEditTitle();
+      if (yearIn)  { yearVal.textContent = mdData.year || newYear; yearIn.closest('.lb-field-row') && _commitFieldEdit(yearRow); }
+      if (plotIn)  { plotVal.textContent = mdData.plot || newPlot; plotIn.closest('.lb-field-row') && _commitFieldEdit(plotRow); }
+      // Refresh title display
+      const h2 = document.querySelector('#metadata h2');
+      if (h2 && !document.getElementById('title-edit-input')) {
+        const span = document.getElementById('lb-title');
+        if (span) span.textContent = mdData.title || newTitle;
+      }
+    }
+  } catch (err) {
+    errors.push('Network error');
+  }
+
+  // 2. Collection — read the combo input value and save if changed
+  const collInput   = document.getElementById('lb-collection-input');
+  const collCurrent = _lightboxGridItem?.dataset.collection || '';
+  const collNew     = (collInput?.value || '').trim();
+  if (collNew !== collCurrent) {
+    try {
+      const cResp = await fetch('/set_collection', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ filename: _lightboxFilename, group: collNew }),
+      });
+      if (!cResp.ok) errors.push('Collection save failed');
+      else if (_lightboxGridItem) _lightboxGridItem.dataset.collection = collNew;
+    } catch (_) { errors.push('Collection network error'); }
+  }
+
+  // 3. Show result
+  btn.classList.remove('saving');
+  if (errors.length) {
+    btn.textContent = 'Save failed';
+    btn.style.background = '#c0392b';
+    setTimeout(function () {
+      btn.textContent = 'Save Changes';
+      btn.style.background = '';
+    }, 2500);
+  } else {
+    btn.classList.add('saved');
+    btn.textContent = '\u2713 Saved!';
+    setTimeout(function () {
+      btn.classList.remove('saved');
+      btn.textContent = 'Save Changes';
+    }, 2000);
+  }
+}
+
+/** Close the inline edit UI on a field row without re-fetching (used by lbSaveAll). */
+function _commitFieldEdit(row) {
+  if (!row) return;
+  const input     = row.querySelector('.lb-field-input');
+  const saveBtn   = row.querySelector('.lb-field-save');
+  const cancelBtn = row.querySelector('.lb-field-cancel');
+  const valEl     = row.querySelector('.lb-field-val');
+  const editBtn   = row.querySelector('.lb-field-btn');
+  if (input)     input.remove();
+  if (saveBtn)   saveBtn.remove();
+  if (cancelBtn) cancelBtn.remove();
+  if (valEl)     valEl.style.display   = '';
+  if (editBtn)   editBtn.style.display = '';
+  delete row.dataset.editing;
 }
 
 // ── Title editing ─────────────────────────────────────────────────────────────
@@ -921,7 +1200,7 @@ async function saveTitle() {
       '<button class="lb-icon-btn" title="Rename file" onclick="startEditTitle()">\u270f</button>';
 
     // Update lightbox image src
-    document.getElementById('lightboxImage').src = '/posters/' + data.new_filename;
+    _setLightboxSrc('/posters/' + data.new_filename);
 
     // Update the grid item
     if (_lightboxGridItem) {
@@ -1336,6 +1615,196 @@ async function _saveCollection(group) {
   }
 }
 
+// ── Link Metadata ─────────────────────────────────────────────────────────────
+
+let _linkModalGridItem  = null;
+let _linkModalOnSuccess = null;
+
+/**
+ * Open the Link Metadata modal.
+ *   gridItem  — the .grid-item whose metadata we're updating
+ *   onSuccess — optional callback(data) called after a successful apply
+ *               (used by the lightbox to update its display fields)
+ */
+function openLinkModal(gridItem, onSuccess) {
+  const item     = (gridItem && gridItem.closest) ? gridItem.closest('.grid-item') : gridItem;
+  const filename = item?.dataset.filename || '';
+  if (!filename) { showToast('No poster selected', 'error'); return; }
+
+  _linkModalGridItem  = item;
+  _linkModalOnSuccess = onSuccess || null;
+
+  const modal = document.getElementById('link-modal');
+  const body  = document.getElementById('link-modal-body');
+  if (!modal || !body) return;
+
+  body.innerHTML = '';
+  _buildLinkUI(body, filename);
+  modal.classList.add('show');
+}
+
+function closeLinkModal() {
+  const modal = document.getElementById('link-modal');
+  if (modal) modal.classList.remove('show');
+  _linkModalGridItem  = null;
+  _linkModalOnSuccess = null;
+}
+
+/**
+ * Build the full link UI inside container:
+ *   search input → scrollable list (all entries loaded immediately) →
+ *   preview panel → Apply / Cancel buttons
+ */
+function _buildLinkUI(container, filename) {
+  container.innerHTML =
+    '<div class="lls-search-row">' +
+      '<svg class="lls-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+      '<input class="lls-input" type="text" placeholder="Filter by title\u2026" autocomplete="off" />' +
+    '</div>' +
+    '<div class="lls-list-wrap">' +
+      '<div class="lls-list"><div class="lls-status">Loading\u2026</div></div>' +
+    '</div>' +
+    '<div class="lls-preview lls-preview-hint">Select an entry above to preview</div>' +
+    '<div class="lls-footer">' +
+      '<button class="lls-cancel btn-ghost" onclick="closeLinkModal()">Cancel</button>' +
+      '<button class="lls-apply btn-steam-primary" disabled>Apply</button>' +
+    '</div>';
+
+  const input    = container.querySelector('.lls-input');
+  const list     = container.querySelector('.lls-list');
+  const preview  = container.querySelector('.lls-preview');
+  const applyBtn = container.querySelector('.lls-apply');
+
+  let _entries  = [];
+  let _selected = null;
+
+  function _renderList(q) {
+    const lq     = q.toLowerCase();
+    const shown  = q
+      ? _entries.filter(function (e) { return e.title.toLowerCase().includes(lq); })
+      : _entries;
+
+    list.innerHTML = '';
+
+    if (!shown.length) {
+      list.innerHTML = '<div class="lls-status">No matches</div>';
+      return;
+    }
+
+    shown.forEach(function (entry) {
+      const row = document.createElement('div');
+      row.className = 'lls-item';
+      if (_selected && _selected.key === entry.key) row.classList.add('lls-selected');
+      row.innerHTML =
+        '<span class="lls-item-title">' + escHtml(entry.title) + '</span>' +
+        '<span class="lls-item-meta">' + escHtml(entry.year) +
+          (entry.rating && entry.rating !== 'N/A' ? ' \u00b7 \u2605' + escHtml(entry.rating) : '') +
+        '</span>';
+      row.addEventListener('click', function () {
+        _selected = entry;
+        list.querySelectorAll('.lls-item').forEach(function (r) { r.classList.remove('lls-selected'); });
+        row.classList.add('lls-selected');
+        row.scrollIntoView({ block: 'nearest' });
+        preview.classList.remove('lls-preview-hint');
+        preview.innerHTML =
+          '<div class="lls-pv-title">' + escHtml(entry.title) + '</div>' +
+          '<div class="lls-pv-meta">' + escHtml(entry.year) +
+            (entry.rating && entry.rating !== 'N/A' ? ' \u00b7 \u2605 ' + escHtml(entry.rating) : '') +
+          '</div>' +
+          (entry.plot ? '<div class="lls-pv-plot">' + escHtml(entry.plot) + '</div>' : '');
+        applyBtn.disabled = false;
+      });
+      list.appendChild(row);
+    });
+  }
+
+  // Load all cache entries as soon as the UI opens
+  (async function loadEntries() {
+    try {
+      const resp = await fetch('/cache_entries');
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      _entries = await resp.json();
+      _renderList('');
+    } catch (err) {
+      list.innerHTML = '<div class="lls-status lls-status-error">Failed to load entries: ' + escHtml(err.message) + '</div>';
+    }
+  })();
+
+  input.addEventListener('input', function () {
+    _renderList(this.value.trim());
+  });
+
+  applyBtn.addEventListener('click', async function () {
+    if (!_selected) return;
+    applyBtn.textContent = 'Applying\u2026';
+    applyBtn.disabled    = true;
+    try {
+      const resp = await fetch('/link_metadata', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          filename: filename,
+          title:    _selected.title,
+          year:     _selected.year,
+          rating:   _selected.rating,
+          plot:     _selected.plot,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        showToast(data.error || 'Link failed', 'error');
+        applyBtn.textContent = 'Apply';
+        applyBtn.disabled    = false;
+        return;
+      }
+      // Notify the caller (lightbox path) to update its display fields
+      if (_linkModalOnSuccess) _linkModalOnSuccess(data);
+      // Always sync the grid item's data-* attrs and overlay
+      if (_linkModalGridItem) {
+        if (data.title)  _linkModalGridItem.dataset.title  = data.title;
+        if (data.year)   _linkModalGridItem.dataset.year   = data.year;
+        if (data.rating) _linkModalGridItem.dataset.rating = data.rating;
+        if (data.plot)   _linkModalGridItem.dataset.plot   = data.plot;
+        const ov = _linkModalGridItem.querySelector('.card-overlay');
+        if (ov) _updateCardOverlayContent(ov, _linkModalGridItem);
+      }
+      showToast('\u2713 Metadata linked');
+      closeLinkModal();
+    } catch (_) {
+      showToast('Network error', 'error');
+      applyBtn.textContent = 'Apply';
+      applyBtn.disabled    = false;
+    }
+  });
+
+  setTimeout(function () { input.focus(); }, 0);
+}
+
+/**
+ * Update the open lightbox display after a successful link.
+ * Called as the onSuccess callback from the lightbox "Link Metadata" button.
+ */
+function _applyLinkedMetadata(data) {
+  const titleSpan = document.getElementById('lb-title');
+  if (titleSpan && data.title) titleSpan.textContent = data.title;
+
+  const yearRow = document.getElementById('lb-field-year');
+  if (yearRow && data.year) {
+    const v = yearRow.querySelector('.lb-field-val');
+    if (v) v.textContent = data.year;
+  }
+  const imdbRow = document.getElementById('lb-field-imdb');
+  if (imdbRow && data.rating) {
+    const v = imdbRow.querySelector('.lb-field-val');
+    if (v) v.textContent = data.rating;
+  }
+  const plotRow = document.getElementById('lb-field-plot');
+  if (plotRow && data.plot) {
+    const v = plotRow.querySelector('.lb-field-val');
+    if (v) v.textContent = data.plot;
+  }
+}
+
 // ── DOMContentLoaded ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function () {
   // Restore saved card size
@@ -1360,6 +1829,11 @@ document.addEventListener('DOMContentLoaded', function () {
   if (countEl) {
     countEl.textContent = document.querySelectorAll('.grid-item').length + ' titles';
   }
+
+  // Close link modal by clicking outside the card
+  document.getElementById('link-modal')?.addEventListener('click', function (e) {
+    if (e.target === this) closeLinkModal();
+  });
 
   // Close lightbox by clicking the dark backdrop (outside .lb-dialog)
   const lightboxEl = document.getElementById('lightbox');
@@ -1400,8 +1874,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (e.key === 'Escape') {
       const modal    = document.getElementById('upload-modal');
       const dropdown = document.getElementById('recent-dropdown');
+      const linkModal = document.getElementById('link-modal');
       if (modal && modal.classList.contains('show')) {
         closeUploadModal();
+      } else if (linkModal && linkModal.classList.contains('show')) {
+        closeLinkModal();
       } else if (dropdown && dropdown.classList.contains('open')) {
         dropdown.classList.remove('open');
         document.getElementById('recent-toggle-btn')?.classList.remove('active');

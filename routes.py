@@ -13,6 +13,7 @@ RATINGS_PATH = os.path.join(BASE_DIR, "personal_ratings.json")
 ITEMS_PER_PAGE       = 50
 BACKFILL_PER_REQUEST  = 8
 COLLECTIONS_PATH     = os.path.join(BASE_DIR, "collections.json")
+ZOOM_PATH            = os.path.join(BASE_DIR, "poster_zoom.json")
 
 # Regex: valid year paren — exactly 4 digits starting with 19 or 20
 _YEAR_PAT    = re.compile(r'\(((?:19|20)\d{2})\)')
@@ -203,6 +204,22 @@ def _save_collections(data: dict):
     except Exception as e:
         print(f"[COLLECTIONS WRITE ERROR] {e}")
 
+def _load_zoom():
+    if os.path.exists(ZOOM_PATH):
+        try:
+            with open(ZOOM_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def _save_zoom_data(data: dict):
+    try:
+        with open(ZOOM_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"[ZOOM WRITE ERROR] {e}")
+
 # ── Grid generation ───────────────────────────────────────────────────────────
 
 def generate_grid_items():
@@ -216,6 +233,7 @@ def generate_grid_items():
     watched     = _load_watched()
     ratings     = _load_ratings()
     collections = _load_collections()
+    zooms       = _load_zoom()
 
     poster_files = []
     if os.path.isdir(POSTERS_DIR):
@@ -246,6 +264,7 @@ def generate_grid_items():
         watch_status    = watched.get(poster, "")
         personal_rating = int(ratings.get(poster, 0))
         collection      = collections.get(poster, "")
+        zoom            = round(float(zooms.get(poster, 1.0)), 3)
         page = i // ITEMS_PER_PAGE + 1
 
         item_html = (
@@ -255,7 +274,8 @@ def generate_grid_items():
             f' data-filename="{html_escape(poster)}"'
             f' data-watched="{html_escape(watch_status)}"'
             f' data-personal-rating="{personal_rating}"'
-            f' data-collection="{html_escape(collection)}">'
+            f' data-collection="{html_escape(collection)}"'
+            f' data-zoom="{zoom}">'
             f'<img loading="lazy" decoding="async" fetchpriority="low"'
             f' src="/posters/{poster}"'
             f' alt="{html_escape(base_name)}"'
@@ -626,3 +646,108 @@ def recently_added():
     for r in entries:
         del r["mtime"]          # client doesn't need the raw timestamp
     return jsonify(entries[:RECENT_COUNT])
+
+
+@main_bp.route("/save_zoom", methods=["POST"])
+def save_zoom():
+    """Save a per-poster zoom preference (0.5–2.0) to poster_zoom.json."""
+    body     = request.get_json(silent=True) or {}
+    filename = (body.get("filename") or "").strip()
+    zoom_raw = body.get("zoom")
+    if not filename or not _safe_poster_path(filename):
+        return jsonify(error="Invalid filename"), 400
+    try:
+        zoom = float(zoom_raw)
+        if not 0.5 <= zoom <= 2.0:
+            raise ValueError()
+    except (ValueError, TypeError):
+        return jsonify(error="Zoom must be between 0.5 and 2.0"), 400
+
+    zoom_data = _load_zoom()
+    if abs(zoom - 1.0) < 0.005:      # close enough to default — drop the entry
+        zoom_data.pop(filename, None)
+    else:
+        zoom_data[filename] = round(zoom, 3)
+    _save_zoom_data(zoom_data)
+    _GRID_CACHE['html'] = ''          # next page load will encode the new zoom in data-zoom
+    return jsonify(ok=True, filename=filename, zoom=round(zoom, 3))
+
+
+@main_bp.route("/cache_entries")
+def cache_entries():
+    """
+    Return every unique (title, year) entry in omdb_cache.json, sorted alphabetically.
+    Used by the Link Metadata modal to populate its full browsable list.
+    """
+    seen = {}  # (title_lower, year) -> entry dict
+    for key, entry in CACHE.items():
+        if not isinstance(entry, dict):
+            continue
+        title = (entry.get("title") or "").strip()
+        year  = (entry.get("year")  or "").strip()
+        if not title:
+            continue
+        dedup = (title.lower(), year)
+        if dedup not in seen:
+            seen[dedup] = {
+                "key":    key,
+                "title":  title,
+                "year":   year,
+                "rating": entry.get("rating") or "N/A",
+                "plot":   entry.get("plot")   or "",
+            }
+
+    results = sorted(seen.values(), key=lambda x: x["title"].lower())
+    print(f"[CACHE ENTRIES] {len(results)} unique entries returned")
+    return jsonify(results)
+
+
+@main_bp.route("/link_metadata", methods=["POST"])
+def link_metadata():
+    """
+    Write a full metadata payload to omdb_cache.json under the poster's filename key.
+    Accepts: { filename, title, year, rating, plot }
+    """
+    body     = request.get_json(silent=True) or {}
+    filename = (body.get("filename") or "").strip()
+    title    = (body.get("title")    or "").strip()
+    year     = (body.get("year")     or "").strip()
+    rating   = (body.get("rating")   or "N/A").strip()
+    plot     = (body.get("plot")     or "").strip()
+
+    if not filename or not title:
+        print(f"[LINK METADATA] Bad request — filename={filename!r}, title={title!r}")
+        return jsonify(error="Missing filename or title"), 400
+
+    if not _safe_poster_path(filename):
+        print(f"[LINK METADATA] Path traversal attempt: {filename!r}")
+        return jsonify(error="Invalid filename"), 400
+
+    entry = {
+        "title":  title,
+        "year":   year   if year   else "N/A",
+        "rating": rating if rating else "N/A",
+        "plot":   plot   if plot   else "No plot available",
+        "source": "linked",
+    }
+
+    print(f"[LINK METADATA] {filename!r}  <-  '{title}' ({entry['year']})  rating={entry['rating']}")
+
+    CACHE[filename]      = entry
+    data_cache[filename] = entry
+
+    try:
+        _save_cache(CACHE)
+    except Exception as exc:
+        print(f"[LINK METADATA ERROR] cache write failed: {exc}")
+        return jsonify(error="Cache write failed"), 500
+
+    _GRID_CACHE["html"] = ""
+
+    return jsonify(
+        ok     = True,
+        title  = entry["title"],
+        year   = entry["year"],
+        rating = entry["rating"],
+        plot   = entry["plot"],
+    )
