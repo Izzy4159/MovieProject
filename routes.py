@@ -113,7 +113,8 @@ def _run_backfill(misses):
     """Background thread: fetch OMDb data for up to BACKFILL_PER_REQUEST misses."""
     updated = 0
     for poster_fn, title_guess, year in misses[:BACKFILL_PER_REQUEST]:
-        info = get_movie_info(title_guess, year=year)
+        # Pass filename so data.get_movie_info can check poster_ids/manual_overrides first
+        info = get_movie_info(title_guess, year=year, filename=poster_fn)
         if info:
             CACHE[poster_fn] = {
                 "title":  info.get("title")  or title_guess,
@@ -372,6 +373,25 @@ def rename_poster():
     if old_filename in colls:
         colls[new_filename] = colls.pop(old_filename)
         _save_collections(colls)
+
+    # Migrate poster_ids.json entry (if present) — keep same id/source value
+    try:
+        pid_path = os.path.join(BASE_DIR, "poster_ids.json")
+        if os.path.exists(pid_path):
+            try:
+                with open(pid_path, "r", encoding="utf-8") as f:
+                    pid_map = json.load(f)
+            except Exception:
+                pid_map = {}
+            if old_filename in pid_map:
+                pid_map[new_filename] = pid_map.pop(old_filename)
+                try:
+                    with open(pid_path, "w", encoding="utf-8") as f:
+                        json.dump(pid_map, f, indent=2, ensure_ascii=False)
+                except Exception as e:
+                    print(f"[POSTER_IDS WRITE ERROR] {e}")
+    except Exception:
+        pass
 
     return jsonify(new_filename=new_filename, new_title=safe_title)
 

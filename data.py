@@ -20,6 +20,28 @@ if CACHE_FILE.exists():
 else:
     cache = {}
 
+# Optional stable ID mappings (filename -> {source,id})
+POSTER_IDS_FILE = Path("poster_ids.json")
+MANUAL_OVERRIDES_FILE = Path("manual_overrides.json")
+
+try:
+    if POSTER_IDS_FILE.exists():
+        with open(POSTER_IDS_FILE, "r", encoding="utf-8") as f:
+            poster_ids = json.load(f)
+    else:
+        poster_ids = {}
+except Exception:
+    poster_ids = {}
+
+try:
+    if MANUAL_OVERRIDES_FILE.exists():
+        with open(MANUAL_OVERRIDES_FILE, "r", encoding="utf-8") as f:
+            manual_overrides = json.load(f)
+    else:
+        manual_overrides = {}
+except Exception:
+    manual_overrides = {}
+
 # --------- Title / Year Parsing ---------
 
 # Matches (2024), (1999), etc. anywhere in the filename
@@ -165,7 +187,53 @@ def get_anime_info(title: str, max_retries: int = 2, base_sleep: float = 0.7):
 
 # --------- OMDb Primary Lookup ---------
 
-def get_movie_info(title: str, year: str | None = None, max_retries: int = 1, base_sleep: float = 0.6):
+
+def _get_anime_by_id(jikan_id: int) -> dict | None:
+    """Fetch Jikan anime info by numeric id. Returns shape compatible with cache or None."""
+    try:
+        url = f"https://api.jikan.moe/v4/anime/{int(jikan_id)}"
+        resp = requests.get(url, timeout=8)
+        if resp.status_code != 200:
+            return None
+        data = resp.json().get("data") or {}
+        title = data.get("title") or ""
+        year = data.get("year")
+        if not year:
+            aired = data.get("aired") or {}
+            from_date = aired.get("from")
+            year = from_date[:4] if isinstance(from_date, str) and len(from_date) >= 4 else "N/A"
+        return {
+            "title": title or "",
+            "year": year or "N/A",
+            "rating": data.get("score") or "N/A",
+            "plot": data.get("synopsis") or None,
+            "source": "jikan",
+        }
+    except Exception:
+        return None
+
+
+def _get_omdb_by_id(imdb_id: str) -> dict | None:
+    """Fetch OMDb info by imdb ID (i=) and return in same shape used elsewhere."""
+    try:
+        url = f"https://www.omdbapi.com/?apikey={OMDB_API_KEY}&i={urllib.parse.quote(imdb_id)}&plot=short"
+        resp = requests.get(url, timeout=8)
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        if data.get("Response") == "True":
+            return {
+                "title": data.get("Title"),
+                "year": data.get("Year"),
+                "rating": data.get("imdbRating"),
+                "plot": data.get("Plot"),
+                "source": "omdb",
+            }
+    except Exception:
+        return None
+    return None
+
+def get_movie_info(title: str, year: str | None = None, filename: str | None = None, max_retries: int = 1, base_sleep: float = 0.6):
     """
     Return dict with title/year/rating/plot/source, or None on total failure.
 
@@ -176,12 +244,62 @@ def get_movie_info(title: str, year: str | None = None, max_retries: int = 1, ba
 
     Lookup order
     ------------
-    1. Cache hit
-    2. OMDb exact title match  (+ year hint if available)
-    3. OMDb search + fuzzy/year pick -> ID lookup
-    4. Jikan anime fallback
+    1. If `filename` provided: manual_overrides -> poster_ids (by-id fetch)
+    2. Cache hit
+    3. OMDb exact title match  (+ year hint if available)
+    4. OMDb search + fuzzy/year pick -> ID lookup
+    5. Jikan anime fallback
     """
     key = norm_key(title, year)
+
+    # If caller passed a filename, check manual_overrides then poster_ids first
+    if filename:
+        try:
+            mo = manual_overrides.get(filename)
+        except NameError:
+            mo = {}
+        if mo:
+            src = mo.get("source")
+            sid = mo.get("id")
+            if src == "omdb" and sid:
+                result = _get_omdb_by_id(str(sid))
+                if result:
+                    cache[key] = result
+                    _persist_cache()
+                    return result
+            if src == "jikan" and sid:
+                try:
+                    result = _get_anime_by_id(int(sid))
+                except Exception:
+                    result = None
+                if result:
+                    cache[key] = result
+                    _persist_cache()
+                    return result
+
+        try:
+            pids = poster_ids.get(filename)
+        except NameError:
+            pids = {}
+        if pids:
+            src = pids.get("source")
+            sid = pids.get("id")
+            if src == "omdb" and sid:
+                result = _get_omdb_by_id(str(sid))
+                if result:
+                    cache[key] = result
+                    _persist_cache()
+                    return result
+            if src == "jikan" and sid:
+                try:
+                    result = _get_anime_by_id(int(sid))
+                except Exception:
+                    result = None
+                if result:
+                    cache[key] = result
+                    _persist_cache()
+                    return result
+
     if key in cache:
         return cache[key]
 
