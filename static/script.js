@@ -106,7 +106,7 @@ async function populateRecentStrip() {
     card.className = 'recent-card';
 
     const img    = document.createElement('img');
-    img.src      = '/posters/' + encodeURIComponent(item.filename);
+    img.src      = _thumbUrl(item.filename);
     img.alt      = item.title;
     img.loading  = 'lazy';
     img.decoding = 'async';
@@ -129,7 +129,7 @@ async function populateRecentStrip() {
           if (gImg) targetImg = gImg;
         }
       });
-      openLightbox('/posters/' + encodeURIComponent(item.filename), targetImg || img);
+      openLightbox(_posterUrl(item.filename), targetImg || img);
     });
 
     strip.appendChild(card);
@@ -210,7 +210,7 @@ async function _doRename(item, overlay, filename, newTitle, year) {
       item.dataset.title    = data.new_title;
       item.dataset.filename = data.new_filename;
       const img = item.querySelector('img');
-      if (img) img.src = '/posters/' + data.new_filename;
+      if (img) img.src = _thumbUrl(data.new_filename);
       showToast('\u201c' + data.new_title + '\u201d renamed');
       // Sync open lightbox if it's showing this card
       if (_lightboxGridItem === item) {
@@ -383,18 +383,22 @@ function _syncLightboxWatchBtns(status) {
 
 let currentFilter = 'all';
 
+function _itemMatches(item, term, filter) {
+  const titleMatch  = !term || (item.dataset.title || '').toLowerCase().includes(term);
+  const watchStatus = item.dataset.watched || '';
+  const filterMatch =
+    filter === 'all' ||
+    (filter === 'watched'       && watchStatus === 'watched') ||
+    (filter === 'want_to_watch' && watchStatus === 'want_to_watch') ||
+    (filter === 'unwatched'     && watchStatus === '');
+  return titleMatch && filterMatch;
+}
+
 function _applySearchAndFilter(term, filter) {
   const allItems = document.querySelectorAll('.grid-item');
   let visible = 0;
   allItems.forEach(function (item) {
-    const titleMatch  = !term || (item.dataset.title || '').toLowerCase().includes(term);
-    const watchStatus = item.dataset.watched || '';
-    const filterMatch =
-      filter === 'all' ||
-      (filter === 'watched'       && watchStatus === 'watched') ||
-      (filter === 'want_to_watch' && watchStatus === 'want_to_watch') ||
-      (filter === 'unwatched'     && watchStatus === '');
-    const show = titleMatch && filterMatch;
+    const show = _itemMatches(item, term, filter);
     item.style.display = show ? 'block' : 'none';
     if (show) visible++;
   });
@@ -568,11 +572,11 @@ async function _saveFieldEdit(field, value, valEl, cancelFn) {
           if (renResp.ok) {
             _lightboxFilename     = renData.new_filename;
             _lightboxFilenameYear = value;
-            _setLightboxSrc('/posters/' + renData.new_filename);
+            _setLightboxSrc(_posterUrl(renData.new_filename));
             if (_lightboxGridItem) {
               _lightboxGridItem.dataset.filename = renData.new_filename;
               const img = _lightboxGridItem.querySelector('img');
-              if (img) img.src = '/posters/' + renData.new_filename;
+              if (img) img.src = _thumbUrl(renData.new_filename);
             }
           }
         } catch (_) { /* rename failure is non-fatal — metadata was already saved */ }
@@ -666,6 +670,15 @@ let _lightboxGridItem     = null; // reference to the .grid-item DOM node
 let _lightboxZoom         = 1.0;  // current zoom level (0.7–1.3), saved per poster
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Full-size poster (lightbox) vs. ~400px grid thumbnail. */
+function _posterUrl(filename) { return '/posters/' + encodeURIComponent(filename); }
+function _thumbUrl(filename)  { return '/thumbs/'  + encodeURIComponent(filename); }
+
+const _reducedMotionMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
+const _mobileMQ        = window.matchMedia('(max-width: 700px)');
+function _reducedMotion() { return _reducedMotionMQ.matches; }
+
 function escHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -827,6 +840,8 @@ function _setLightboxSrc(url) {
   if (img) {
     img.onload = function () {
       if (!wrap || !img.naturalWidth) return;
+      // Stacked bottom-sheet layout: flex-basis would set height, so leave it to CSS
+      if (_mobileMQ.matches) { wrap.style.flex = ''; return; }
       const ratio   = img.naturalWidth / img.naturalHeight;
       const wrapH   = wrap.clientHeight || (window.innerHeight * 0.88);
       const dialog  = wrap.parentElement;
@@ -846,6 +861,7 @@ function _setLightboxSrc(url) {
 function openLightbox(imageSrc, element) {
   const lightbox = document.getElementById('lightbox');
   const parent        = element.closest('.grid-item');
+  if (parent?.dataset.filename) imageSrc = _posterUrl(parent.dataset.filename);
   const title       = parent?.dataset.title  || 'N/A';
   const displayYear = parent?.dataset.year   || 'N/A';
   const rating      = parent?.dataset.rating || 'N/A';
@@ -945,6 +961,7 @@ function openLightbox(imageSrc, element) {
         '<div id="lb-collection-list" class="lb-collection-list"></div>' +
       '</div>' +
     '</div>' +
+    '<div class="lb-delete-row" id="lb-delete-row">' + _LB_DELETE_BTN + '</div>' +
     '<div class="lb-save-bar">' +
       '<button class="lb-save-btn" id="lb-save-btn" onclick="lbSaveAll()">Save Changes</button>' +
     '</div>';
@@ -965,6 +982,84 @@ function closeLightbox() {
   // Reset sidebar bg so it doesn't bleed if custom tint was set
   const sidebar = document.querySelector('.lb-sidebar');
   if (sidebar) sidebar.style.background = '';
+}
+
+const _LB_DELETE_BTN = '<button class="lb-delete-btn" onclick="_lbConfirmDelete()">\uD83D\uDDD1 Delete poster</button>';
+
+/** Inline confirm for the lightbox delete button. */
+function _lbConfirmDelete() {
+  const row = document.getElementById('lb-delete-row');
+  if (!row || !_lightboxGridItem) return;
+  const item = _lightboxGridItem;
+  row.innerHTML =
+    '<span class="lb-delete-q">Delete this poster?</span>' +
+    '<button class="del-yes">Delete</button>' +
+    '<button class="del-no">Cancel</button>';
+  row.querySelector('.del-yes').addEventListener('click', function () { _doDelete(item); });
+  row.querySelector('.del-no').addEventListener('click', function () { row.innerHTML = _LB_DELETE_BTN; });
+}
+
+// ── Lightbox prev / next (arrow keys, buttons, swipe) ─────────────────────────
+
+/** Ordered list of grid items the lightbox can step through. */
+function _lightboxSequence() {
+  const cur = _lightboxGridItem;
+  const all = Array.from(document.querySelectorAll('.grid-item'));
+  if (_groupViewActive && cur && cur.dataset.collection) {
+    return all.filter(function (i) { return i.dataset.collection === cur.dataset.collection; });
+  }
+  const term = (document.getElementById('searchBar')?.value || '').toLowerCase().trim();
+  return all.filter(function (i) { return _itemMatches(i, term, currentFilter); });
+}
+
+function lightboxStep(dir) {
+  if (!_lightboxGridItem) return;
+  const seq = _lightboxSequence();
+  if (seq.length < 2) return;
+  let idx = seq.indexOf(_lightboxGridItem);
+  idx = (idx + dir + seq.length) % seq.length;
+  const img = seq[idx].querySelector('img');
+  if (img) openLightbox(img.src, img);
+  // Warm the cache for the next poster in the same direction
+  const ahead = seq[(idx + dir + seq.length) % seq.length];
+  if (ahead?.dataset.filename) { const pre = new Image(); pre.src = _posterUrl(ahead.dataset.filename); }
+}
+
+/** Swipe left/right on the poster to step; swipe down (mobile sheet) to close. */
+function _initLightboxSwipe() {
+  const dialog = document.querySelector('#lightbox .lb-dialog');
+  if (!dialog) return;
+  let x0 = null, y0 = null, t0 = 0;
+  dialog.addEventListener('touchstart', function (e) {
+    // Only the image area + handle are swipe surfaces; the sidebar scrolls normally
+    if (!e.target.closest('.lb-image-wrap, .lb-handle') || e.target.closest('.lb-zoom-bar') ||
+        e.touches.length !== 1) { x0 = null; return; }
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now();
+  }, { passive: true });
+  dialog.addEventListener('touchend', function (e) {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    const dy = e.changedTouches[0].clientY - y0;
+    x0 = null;
+    if (Date.now() - t0 > 800) return;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+      lightboxStep(dx < 0 ? 1 : -1);
+    } else if (dy > 80 && Math.abs(dy) > Math.abs(dx) * 1.3 && _mobileMQ.matches) {
+      closeLightbox();
+    }
+  }, { passive: true });
+}
+
+// ── Mobile nav menu ───────────────────────────────────────────────────────────
+
+function toggleNavMenu(force) {
+  const menu = document.getElementById('nav-menu');
+  const btn  = document.getElementById('nav-menu-toggle');
+  if (!menu || !btn) return;
+  const open = typeof force === 'boolean' ? force : !menu.classList.contains('open');
+  menu.classList.toggle('open', open);
+  btn.classList.toggle('active', open);
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
 // ── Poster zoom ───────────────────────────────────────────────────────────────
@@ -1059,11 +1154,11 @@ async function lbSaveAll() {
           if (renResp.ok) {
             _lightboxFilename     = renData.new_filename;
             _lightboxFilenameYear = newYear || _lightboxFilenameYear;
-            _setLightboxSrc('/posters/' + renData.new_filename);
+            _setLightboxSrc(_posterUrl(renData.new_filename));
             if (_lightboxGridItem) {
               _lightboxGridItem.dataset.filename = renData.new_filename;
               const img = _lightboxGridItem.querySelector('img');
-              if (img) img.src = '/posters/' + renData.new_filename;
+              if (img) img.src = _thumbUrl(renData.new_filename);
             }
           }
         } catch (_) { /* rename failure is non-fatal */ }
@@ -1200,14 +1295,14 @@ async function saveTitle() {
       '<button class="lb-icon-btn" title="Rename file" onclick="startEditTitle()">\u270f</button>';
 
     // Update lightbox image src
-    _setLightboxSrc('/posters/' + data.new_filename);
+    _setLightboxSrc(_posterUrl(data.new_filename));
 
     // Update the grid item
     if (_lightboxGridItem) {
       _lightboxGridItem.dataset.title    = data.new_title;
       _lightboxGridItem.dataset.filename = data.new_filename;
       const img = _lightboxGridItem.querySelector('img');
-      if (img) img.src = '/posters/' + data.new_filename;
+      if (img) img.src = _thumbUrl(data.new_filename);
     }
 
   } catch (err) {
@@ -1248,7 +1343,9 @@ function addNewPosterToGrid(filename, title, year) {
   const img = document.createElement('img');
   img.loading  = 'lazy';
   img.decoding = 'async';
-  img.src      = '/posters/' + filename;
+  img.width    = 400;
+  img.height   = 600;
+  img.src      = _thumbUrl(filename);
   img.alt      = title;
   img.addEventListener('click', () => openLightbox(img.src, img));
   div.appendChild(img);
@@ -1882,6 +1979,8 @@ document.addEventListener('DOMContentLoaded', function () {
       } else if (dropdown && dropdown.classList.contains('open')) {
         dropdown.classList.remove('open');
         document.getElementById('recent-toggle-btn')?.classList.remove('active');
+      } else if (document.getElementById('nav-menu')?.classList.contains('open')) {
+        toggleNavMenu(false);
       } else {
         closeLightbox();
       }
@@ -1889,11 +1988,33 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     if (typing) return;
-    if (e.key === 'ArrowRight') changePage(1);
-    if (e.key === 'ArrowLeft')  changePage(-1);
+    const lbOpen = document.getElementById('lightbox')?.classList.contains('show');
+    if (e.key === 'ArrowRight') { if (lbOpen) lightboxStep(1);  else changePage(1); }
+    if (e.key === 'ArrowLeft')  { if (lbOpen) lightboxStep(-1); else changePage(-1); }
   });
 
   document.getElementById('closeLightbox')?.addEventListener('click', closeLightbox);
+  _initLightboxSwipe();
+
+  // Mobile nav menu: close after picking an action, or on outside tap
+  document.getElementById('nav-menu')?.addEventListener('click', function (e) {
+    if (e.target.closest('.nav-filter-btn, .nav-group-view-btn, .nav-recent-btn, .nav-upload-btn, .nav-link')) {
+      toggleNavMenu(false);
+    }
+  });
+  document.addEventListener('click', function (e) {
+    const menu = document.getElementById('nav-menu');
+    if (!menu || !menu.classList.contains('open')) return;
+    if (menu.contains(e.target) || e.target.closest('#nav-menu-toggle')) return;
+    toggleNavMenu(false);
+  });
+
+  // PWA: service worker caches /static/* only (needs https or localhost)
+  if ('serviceWorker' in navigator && window.isSecureContext) {
+    navigator.serviceWorker.register('/sw.js').catch(function (err) {
+      console.warn('Service worker registration failed', err);
+    });
+  }
 
   // Wire drag-and-drop upload zone
   _initDropZone();

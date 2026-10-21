@@ -20,3 +20,6 @@ omdb_cache.json
 git rm -r --cached .venv
 git add .gitignore
 git commit -m "Ignore .venv and local artifacts"
+
+# Generated grid thumbnails (rebuilt lazily)
+posters/thumbs/

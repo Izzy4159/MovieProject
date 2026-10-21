@@ -1,6 +1,8 @@
 import os, json, time, re, threading
-from flask import Blueprint, send_from_directory, render_template, request, jsonify
+from urllib.parse import quote
+from flask import Blueprint, send_from_directory, render_template, request, jsonify, url_for
 from data import get_movie_info, parse_filename, norm_key, cache as data_cache
+from thumbs import ensure_thumb, remove_thumb, rename_thumb, THUMBS_DIR
 
 main_bp = Blueprint("main", __name__)
 
@@ -278,7 +280,8 @@ def generate_grid_items():
             f' data-collection="{html_escape(collection)}"'
             f' data-zoom="{zoom}">'
             f'<img loading="lazy" decoding="async" fetchpriority="low"'
-            f' src="/posters/{poster}"'
+            f' width="400" height="600"'
+            f' src="/thumbs/{quote(poster)}"'
             f' alt="{html_escape(base_name)}"'
             f' onclick="openLightbox(this.src, this)">'
             f'</div>'
@@ -312,6 +315,41 @@ def poster(filename):
         resp.cache_control.max_age = 60*60*24*365
         return resp
 
+@main_bp.route("/thumbs/<path:filename>")
+def thumb(filename):
+    """Grid thumbnail — generated on first request, then served from posters/thumbs/."""
+    path = ensure_thumb(filename)
+    if not path:
+        return jsonify(error="Poster not found"), 404
+    return send_from_directory(THUMBS_DIR, os.path.basename(path), max_age=60*60*24*7)
+
+# ── PWA ───────────────────────────────────────────────────────────────────────
+
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+@main_bp.app_template_global()
+def static_v(filename):
+    """url_for('static') with an mtime query string so browsers/SW pick up edits."""
+    try:
+        v = int(os.path.getmtime(os.path.join(STATIC_DIR, filename)))
+    except OSError:
+        v = 0
+    return url_for("static", filename=filename, v=v)
+
+@main_bp.route("/sw.js")
+def service_worker():
+    # Served from the root so its scope covers the whole app
+    resp = send_from_directory(STATIC_DIR, "sw.js", max_age=0)
+    resp.headers["Content-Type"] = "application/javascript"
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+@main_bp.route("/manifest.webmanifest")
+def manifest():
+    resp = send_from_directory(STATIC_DIR, "manifest.webmanifest", max_age=60*60)
+    resp.headers["Content-Type"] = "application/manifest+json"
+    return resp
+
 @main_bp.route("/rename", methods=["POST"])
 def rename_poster():
     body         = request.get_json(silent=True) or {}
@@ -340,6 +378,7 @@ def rename_poster():
         if os.path.exists(new_path):
             return jsonify(error="A poster with that name already exists"), 409
         os.rename(old_path, new_path)
+        rename_thumb(old_filename, new_filename)
 
     # Move cache entry: filename key preferred; also clear any legacy norm_key entry
     old_title_g, old_yr = _parse_poster_filename(os.path.splitext(old_filename)[0])
@@ -441,6 +480,8 @@ def upload_poster():
         except ImportError:
             return jsonify(error="Pillow is required for jpg/png conversion. Run: pip install Pillow"), 500
 
+    ensure_thumb(filename)
+
     new_entry = {
         "title":  safe_title,
         "year":   year or "N/A",
@@ -468,6 +509,7 @@ def delete_poster():
         return jsonify(error="Poster not found"), 404
 
     os.remove(path)
+    remove_thumb(filename)
     _GRID_CACHE['html'] = ''
 
     # Remove from both caches (filename key + legacy norm_key)

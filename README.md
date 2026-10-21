@@ -17,13 +17,20 @@ Every poster is handpicked, converted to `.webp`, and laid out in a responsive g
 ### Recently Added
 - **Recently Added Dropdown** — nav bar button reveals the 12 most recently modified posters, fetched live from the filesystem on every open so newly uploaded or manually added posters always appear at the top
 
+### Mobile & Installable App
+- **Phone layout** — under 700 px the grid becomes fluid (the size slider sets the minimum column width), every touch target is at least 44 px, and hover-only controls are revealed for touch
+- **Collapsible nav** — below ~1350 px (where the full toolbar no longer fits) the nav shrinks to brand + search + a ☰ menu holding filters, size, Group View, Recently Added, upload and theme
+- **Bottom-sheet lightbox** — on phones the lightbox slides up from the bottom; **swipe left/right** on the poster to move between posters, **swipe down** to close
+- **Installable (PWA)** — web app manifest + service worker (caches static assets only), so the site can be added to a phone home screen and opens full-screen (`display: standalone`)
+
 ### Poster Management
 - **Drag-and-Drop Upload** — "+ Add Poster" opens a modal; drop or browse any jpg/png/webp; non-webp images are auto-converted via Pillow and saved as `.webp`
 - **Inline Title Rename** — pencil icon on card hover; renames the file on disk and migrates all associated metadata, watch status, rating, and collection in one step
-- **Delete Poster** — remove a poster from the lightbox; deletes the file and cleans up all associated state
+- **Delete Poster** — trash icon on card hover, or the "Delete poster" button in the lightbox; deletes the file, its thumbnail, and all associated state
 
 ### Lightbox
 - **Full Metadata View** — title, year, IMDb rating, plot
+- **Previous / Next** — `←` / `→` keys, the ‹ › buttons on the poster, or swipe on touch screens; steps through posters matching the current search + filter (or the open collection in Group View)
 - **Inline Metadata Editing** — edit title, year, and plot directly in the lightbox without leaving the page
 - **Watched / Want to Watch** — two toggle buttons; marks a poster with a green ✓ badge (watched) or amber ♥ badge (want to watch); filters in the nav bar reflect the status immediately
 - **Personal Star Rating** — 1–5 star rating stored locally per poster
@@ -43,7 +50,10 @@ Every poster is handpicked, converted to `.webp`, and laid out in a responsive g
 - **Local Metadata Cache** (`omdb_cache.json`) — avoids redundant API calls; auto-updated on backfill
 - **Background Backfill** — up to 8 uncached posters fetched from OMDb per page load in a daemon thread; never blocks page delivery
 - **In-Memory Grid Cache** — grid HTML is cached in memory and keyed by folder + cache file mtimes; subsequent requests return instantly with no disk I/O
-- **Auto-close Watchdog** — Flask server shuts itself down when the browser tab is closed
+- **Grid Thumbnails** — the grid loads ~400 px `.webp` thumbnails (quality 80, ~10× smaller than the originals) from `posters/thumbs/`; they're generated lazily on first request and on upload, regenerated on rename, and removed on delete. The lightbox always loads the full-size poster
+- **Lazy, layout-stable images** — `loading="lazy"`, `decoding="async"`, explicit `width`/`height`, and `content-visibility: auto` on cards so off-screen posters cost nothing
+- **Compositor-only animation** — only `transform` and `opacity` are animated; everything honours `prefers-reduced-motion`
+- **Auto-shutdown Watchdog** — when run locally, the server stops itself 30 minutes after startup; disable with `--no-watchdog` / `WATCHDOG=0` (always off on Render)
 - **Flask-Compress** — gzip/brotli compression for faster asset delivery (optional)
 
 ---
@@ -59,7 +69,8 @@ Every poster is handpicked, converted to `.webp`, and laid out in a responsive g
 | `OMDb API` | Movie/TV metadata (title, year, rating, plot) |
 | `Jikan API` | Anime metadata from MyAnimeList |
 | `difflib` | Fuzzy title matching between filenames and API results |
-| `Pillow` | Image conversion to `.webp` on upload |
+| `Pillow` | `.webp` conversion on upload, grid thumbnails |
+| Web App Manifest + Service Worker | Installable PWA, static-asset caching |
 | `Flask-Compress` | Optional gzip/brotli compression |
 | `Git` / `GitHub` | Version control |
 
@@ -75,9 +86,10 @@ Every poster is handpicked, converted to `.webp`, and laid out in a responsive g
 
 ```
 MovieProject/
-├── main.py                  # Flask app entry point + browser watchdog
+├── main.py                  # Flask app entry point, CLI flags, shutdown watchdog
 ├── routes.py                # Blueprint: grid, routes, backfill, all API endpoints
 ├── data.py                  # OMDb + Jikan API lookup, filename parsing, cache
+├── thumbs.py                # Grid thumbnail generation (also a CLI pre-builder)
 ├── build_cache.py           # CLI: prebuild metadata cache for all posters
 ├── rename_and_cache.py      # CLI: clean filenames + add (YYYY), rebuild cache
 ├── convert_to_webp.py       # CLI: batch convert JPG/PNG posters to .webp
@@ -91,11 +103,15 @@ MovieProject/
 ├── posters/                 # Poster collection (.webp) — named "Title (YYYY).webp"
 │   ├── Alien (1979).webp
 │   ├── Dune Part Two (2024).webp
-│   └── … (hundreds more)
+│   ├── … (hundreds more)
+│   └── thumbs/              # Generated 400px grid thumbnails (git-ignored)
 │
 ├── static/
-│   ├── style.css            # Grid, lightbox, animations, dark/light mode, group view
-│   └── script.js            # All client-side logic
+│   ├── style.css            # Grid, lightbox, animations, dark/light mode, group view, mobile
+│   ├── script.js            # All client-side logic
+│   ├── sw.js                # Service worker (served at /sw.js; caches /static/* only)
+│   ├── manifest.webmanifest # PWA manifest (served at /manifest.webmanifest)
+│   └── icons/               # App icons (192, 512, maskable, apple-touch)
 │
 ├── templates/
 │   └── index.html           # Jinja2 template — injects poster grid
@@ -124,8 +140,32 @@ pip install flask-compress Pillow   # optional extras
 # 4. Run the app
 python main.py
 # Opens http://127.0.0.1:5000 automatically
-# Close the browser tab to shut down the server
+# Stops itself after 30 minutes unless you pass --no-watchdog
 ```
+
+### Command-line flags
+
+| Flag | Env var | Default | Effect |
+|---|---|---|---|
+| `--host HOST` | `HOST` | `127.0.0.1` (`0.0.0.0` on Render) | Interface to bind. Use `0.0.0.0` for LAN / phone access |
+| `--port PORT` | `PORT` | `5000` | Port to listen on |
+| `--no-watchdog` | `WATCHDOG=0` | watchdog on | Don't auto-shutdown after 30 minutes |
+| `--no-browser` | `OPEN_BROWSER=0` | browser opens | Don't open a browser tab on startup |
+
+On Render (detected via the `RENDER` env var Render sets) the watchdog and browser auto-open are always off and the host defaults to `0.0.0.0`.
+
+### Open it on your phone (same Wi-Fi)
+
+```bash
+python main.py --host 0.0.0.0 --no-watchdog
+# Starting Movie Poster Grid → http://127.0.0.1:5000/
+# On your phone (same Wi-Fi) → http://192.168.1.23:5000/
+```
+
+1. Run with `--host 0.0.0.0` — the startup log prints your computer's LAN address.
+2. Open that address on your phone. If it doesn't load, allow Python through the Windows Defender Firewall for **Private** networks (Windows usually prompts the first time).
+3. **Add to Home Screen** — on iPhone: Share → *Add to Home Screen*; it opens full-screen with no browser bar.
+   On Android/Chrome, the full "Install app" prompt and service worker need HTTPS, so over plain `http://` on the LAN Chrome only adds a shortcut. The live Render site (HTTPS) installs as a full PWA.
 
 ---
 
@@ -153,6 +193,15 @@ python rename_and_cache.py --limit 10  # test on first 10
 python rename_and_cache.py --sleep 1.2 # slower rate
 ```
 
+### `thumbs.py` — Pre-build grid thumbnails
+
+Thumbnails are created on demand, but you can build them all up front (e.g. after a bulk import) so the first page load is instant.
+
+```bash
+python thumbs.py           # build missing / out-of-date thumbs
+python thumbs.py --force   # rebuild everything
+```
+
 ### `convert_to_webp.py` — Convert images to .webp
 
 Converts `.jpg` / `.png` posters to `.webp` (quality 95, max 4K) and deletes originals.
@@ -167,6 +216,7 @@ python convert_to_webp.py posters/     # specify a folder
 ## Notes
 
 - No `.venv` is included — create your own locally.
+- `posters/thumbs/` is generated and git-ignored; it's rebuilt automatically wherever the app runs.
 - `omdb_cache.json` is committed so the live site has metadata ready without API calls on first load.
 - `watched.json`, `personal_ratings.json`, and `collections.json` are local state files — not committed.
 - Poster collection is a personal curation — the goal is style and favorite picks, not completeness.
