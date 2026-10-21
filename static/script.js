@@ -281,6 +281,7 @@ async function _doDelete(item) {
     if (!resp.ok) { showToast(data.error || 'Delete failed', 'error'); return; }
     if (_lightboxGridItem === item) closeLightbox();
     item.remove();
+    if (_theater.active) _thRemoveItem(item);
     showToast('Poster deleted');
     populateRecentStrip();
     const countEl = document.getElementById('total-count');
@@ -982,6 +983,7 @@ function closeLightbox() {
   // Reset sidebar bg so it doesn't bleed if custom tint was set
   const sidebar = document.querySelector('.lb-sidebar');
   if (sidebar) sidebar.style.background = '';
+  if (_theater.active) _thRenderHero();
 }
 
 const _LB_DELETE_BTN = '<button class="lb-delete-btn" onclick="_lbConfirmDelete()">\uD83D\uDDD1 Delete poster</button>';
@@ -1004,6 +1006,10 @@ function _lbConfirmDelete() {
 /** Ordered list of grid items the lightbox can step through. */
 function _lightboxSequence() {
   const cur = _lightboxGridItem;
+  if (_theater.active) {
+    const row = _theater.rows[_theater.row];
+    if (row && row.items.includes(cur)) return row.items;
+  }
   const all = Array.from(document.querySelectorAll('.grid-item'));
   if (_groupViewActive && cur && cur.dataset.collection) {
     return all.filter(function (i) { return i.dataset.collection === cur.dataset.collection; });
@@ -1020,6 +1026,7 @@ function lightboxStep(dir) {
   idx = (idx + dir + seq.length) % seq.length;
   const img = seq[idx].querySelector('img');
   if (img) openLightbox(img.src, img);
+  if (_theater.active) _thSyncToItem(seq[idx]);
   // Warm the cache for the next poster in the same direction
   const ahead = seq[(idx + dir + seq.length) % seq.length];
   if (ahead?.dataset.filename) { const pre = new Image(); pre.src = _posterUrl(ahead.dataset.filename); }
@@ -1902,6 +1909,615 @@ function _applyLinkedMetadata(data) {
   }
 }
 
+// ── Theater mode (Steam Big Picture style) ────────────────────────────────────
+//
+// Rows are built from the grid's data-* attributes plus /recently_added.
+// Keyboard / mouse / gamepad move rows with transform (GPU, no layout);
+// touch switches the rows to native overflow scrolling with scroll-snap.
+
+const _coarseMQ = window.matchMedia('(pointer: coarse)');
+
+const _theater = {
+  active:   false,
+  busy:     false,     // entering / exiting in progress
+  rows:     [],        // [{ title, items, el, viewport, track, col }]
+  row:      0,
+  touch:    false,     // native-scroll mode
+  scrollY:  0,
+  bgFront:  'a',
+  bgTimer:  0,
+  preloaded: new Set(),
+  lastMouse: 0,
+  wheelAt:  0,
+  ignoreScrollUntil: 0,
+  touchRow: -1,        // row under the most recent touch
+};
+
+function toggleTheater() { _theater.active ? exitTheater() : enterTheater(); }
+
+function _withViewTransition(update) {
+  if (!document.startViewTransition || _reducedMotion()) {
+    update();
+    return Promise.resolve(false);
+  }
+  return document.startViewTransition(update).finished.then(function () { return true; }, function () { return true; });
+}
+
+function _requestFullscreen() {
+  const el = document.documentElement;
+  if (!el.requestFullscreen || document.fullscreenElement) return Promise.resolve();
+  return el.requestFullscreen({ navigationUI: 'hide' })
+    .then(function () {
+      // Keyboard Lock lets Esc reach the page (close lightbox → exit theater)
+      // instead of the browser silently leaving fullscreen.
+      if (navigator.keyboard && navigator.keyboard.lock) {
+        return navigator.keyboard.lock(['Escape']).catch(function () {});
+      }
+    })
+    .catch(function () {});
+}
+
+function _exitFullscreen() {
+  if (navigator.keyboard && navigator.keyboard.unlock) navigator.keyboard.unlock();
+  if (!document.fullscreenElement || !document.exitFullscreen) return Promise.resolve();
+  return document.exitFullscreen().catch(function () {});
+}
+
+/** The grid <img> for an item, if it's currently rendered inside the viewport. */
+function _visibleGridImg(item) {
+  if (!item || !item.offsetParent) return null;
+  const r = item.getBoundingClientRect();
+  if (r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth) return null;
+  return item.querySelector('img');
+}
+
+function _thCollectRows(recent) {
+  const items  = Array.from(document.querySelectorAll('.grid-item'));
+  const byFile = new Map(items.map(function (i) { return [i.dataset.filename, i]; }));
+  const pr     = function (i) { return parseInt(i.dataset.personalRating || '0', 10); };
+  const rows   = [];
+  function add(title, list, kind) { if (list.length) rows.push({ title: title, items: list, kind: kind || '' }); }
+
+  add('Recently Added', (recent || []).map(function (r) { return byFile.get(r.filename); }).filter(Boolean));
+  add('Want to Watch',  items.filter(function (i) { return i.dataset.watched === 'want_to_watch'; }));
+  add('Watched',        items.filter(function (i) { return i.dataset.watched === 'watched'; }));
+  add('Top Rated',      items.filter(function (i) { return pr(i) > 0; }).sort(function (a, b) {
+    return pr(b) - pr(a) || (a.dataset.title || '').localeCompare(b.dataset.title || '');
+  }));
+
+  const groups = {};
+  items.forEach(function (i) {
+    const g = (i.dataset.collection || '').trim();
+    if (g) (groups[g] = groups[g] || []).push(i);
+  });
+  Object.keys(groups).sort(function (a, b) { return a.toLowerCase().localeCompare(b.toLowerCase()); })
+    .forEach(function (g) { add(g, groups[g], 'collection'); });
+
+  if (!rows.length) add('Library', items);
+  return rows;
+}
+
+function _thBuild() {
+  const track = document.getElementById('th-rows-track');
+  track.innerHTML = '';
+  track.style.transform = '';
+  document.getElementById('th-rows').scrollTop = 0;
+  _theater.rows.forEach(function (row, r) {
+    const sec = document.createElement('section');
+    sec.className   = 'th-row';
+    sec.dataset.row = r;
+    sec.innerHTML =
+      '<h2 class="th-row-title">' +
+        (row.kind === 'collection' ? '<span class="th-row-kind">Collection</span>' : '') +
+        escHtml(row.title) + '<span class="th-row-count">' + row.items.length + '</span>' +
+      '</h2>';
+    const vp = document.createElement('div');
+    vp.className = 'th-row-viewport';
+    const tr = document.createElement('div');
+    tr.className = 'th-row-track';
+    row.items.forEach(function (item, c) {
+      const card = document.createElement('button');
+      card.type        = 'button';
+      card.className   = 'th-card';
+      card.tabIndex    = -1;
+      card.dataset.col = c;
+      card.setAttribute('aria-label', item.dataset.title || '');
+      const img = document.createElement('img');
+      img.src       = _thumbUrl(item.dataset.filename);
+      img.alt       = '';
+      img.width     = 400;
+      img.height    = 600;
+      img.loading   = c < 10 ? 'eager' : 'lazy';
+      img.decoding  = 'async';
+      img.draggable = false;
+      card.appendChild(img);
+      tr.appendChild(card);
+    });
+    vp.appendChild(tr);
+    sec.appendChild(vp);
+    track.appendChild(sec);
+    row.el = sec; row.viewport = vp; row.track = tr; row.col = 0;
+    vp.addEventListener('scroll', function () { _thOnRowScroll(r); }, { passive: true });
+  });
+}
+
+function _thCurItem() {
+  const row = _theater.rows[_theater.row];
+  return row ? row.items[row.col] : null;
+}
+
+function _thCardEl(r, c) {
+  const row = _theater.rows[r];
+  return row && row.track ? row.track.children[c] : null;
+}
+
+/** Move focus to row r / column c. opts: { reveal: true|false|'ifneeded', instant } */
+function _thFocus(r, c, opts) {
+  opts = opts || {};
+  const rows = _theater.rows;
+  if (!rows.length) return;
+  r = Math.max(0, Math.min(rows.length - 1, r));
+  const row = rows[r];
+  c = Math.max(0, Math.min(row.items.length - 1, c));
+
+  const prevRow = rows[_theater.row];
+  if (prevRow) {
+    _thCardEl(_theater.row, prevRow.col)?.classList.remove('th-focus');
+    prevRow.el?.classList.remove('th-active');
+  }
+  _theater.row = r;
+  row.col = c;
+  row.el.classList.add('th-active');
+  _thCardEl(r, c)?.classList.add('th-focus');
+
+  if (opts.reveal !== false) _thReveal(r, !!opts.instant, opts.reveal === 'ifneeded');
+  _thRenderHero();
+  clearTimeout(_theater.bgTimer);
+  _theater.bgTimer = setTimeout(_thSettled, 110);
+}
+
+/** Bring row r's focused card into view — transform in pointer mode, scroll in touch mode. */
+function _thReveal(r, instant, onlyIfNeeded) {
+  const row = _theater.rows[r];
+  const card = _thCardEl(r, row.col);
+  if (!row || !card) return;
+  const rowsEl    = document.getElementById('th-rows');
+  const rowsTrack = document.getElementById('th-rows-track');
+  const pad   = parseFloat(getComputedStyle(row.track).paddingLeft) || 0;
+  const vpW   = row.viewport.clientWidth;
+  const maxX  = Math.max(0, row.track.scrollWidth - vpW);
+  const peek  = row.col > 0 ? card.offsetWidth * 0.35 : 0;
+  let x = Math.round(Math.min(Math.max(0, card.offsetLeft - pad - peek), maxX));
+  const viewH = rowsEl.clientHeight - (parseFloat(getComputedStyle(rowsEl).paddingTop) || 0);
+  const maxY  = Math.max(0, rowsTrack.scrollHeight - viewH);
+  let y = Math.min(row.el.offsetTop, maxY);
+
+  if (_theater.touch) {
+    const behavior = (instant || _reducedMotion()) ? 'auto' : 'smooth';
+    _theater.ignoreScrollUntil = performance.now() + 700;
+    if (onlyIfNeeded) {
+      const l = card.offsetLeft - row.viewport.scrollLeft;
+      if (l >= 0 && l + card.offsetWidth <= vpW) x = row.viewport.scrollLeft;
+    }
+    row.viewport.scrollTo({ left: x, behavior: behavior });
+    rowsEl.scrollTo({ top: y, behavior: behavior });
+    return;
+  }
+
+  if (onlyIfNeeded) {
+    const curX = row.x || 0;
+    const l = card.offsetLeft - curX;
+    if (l >= pad * 0.5 && l + card.offsetWidth <= vpW - pad * 0.5) x = curX;
+    const curY = _theater.y || 0;
+    const top = row.el.offsetTop - curY;
+    if (top >= 0 && top + row.el.offsetHeight <= rowsEl.clientHeight) y = curY;
+  }
+  _thSetTransform(row.track, 'translate3d(' + (-x) + 'px,0,0)', instant);
+  _thSetTransform(rowsTrack, 'translate3d(0,' + (-y) + 'px,0)', instant);
+  row.x = x;
+  _theater.y = y;
+}
+
+function _thSetTransform(el, value, instant) {
+  if (instant) {
+    el.classList.add('th-no-anim');
+    el.style.transform = value;
+    void el.offsetWidth;
+    el.classList.remove('th-no-anim');
+  } else {
+    el.style.transform = value;
+  }
+}
+
+function _thRevealAll(instant) {
+  _theater.rows.forEach(function (row, r) { if (r !== _theater.row) _thReveal(r, true); });
+  _thReveal(_theater.row, instant);
+}
+
+/** Switch between transform-driven (keys/mouse/pad) and native-scroll (touch) rows. */
+function _thSetTouch(on) {
+  if (_theater.touch === on) return;
+  _theater.touch = on;
+  const theater = document.getElementById('theater');
+  theater.classList.toggle('th-touch', on);
+  document.getElementById('th-rows-track').style.transform = '';
+  _theater.y = 0;
+  _theater.rows.forEach(function (row) { row.track.style.transform = ''; row.x = 0; row.viewport.scrollLeft = 0; });
+  document.getElementById('th-rows').scrollTop = 0;
+  _thRevealAll(true);
+}
+
+function _thRenderHero() {
+  const item = _thCurItem();
+  const hero = document.getElementById('th-hero');
+  if (!item || !hero) return;
+  const year   = item.dataset.year && item.dataset.year !== 'N/A' ? item.dataset.year : '';
+  const imdb   = item.dataset.rating && item.dataset.rating !== 'N/A' ? item.dataset.rating : '';
+  const pr     = parseInt(item.dataset.personalRating || '0', 10);
+  const plot   = item.dataset.plot && item.dataset.plot !== 'No plot available' ? item.dataset.plot : '';
+  const status = item.dataset.watched === 'watched' ? '\u2713 Watched'
+               : item.dataset.watched === 'want_to_watch' ? '\u2665 Want to Watch' : '';
+  const parts = [];
+  if (year)   parts.push('<span>' + escHtml(year) + '</span>');
+  if (imdb)   parts.push('<span class="th-imdb">IMDb</span><span>' + escHtml(imdb) + '</span>');
+  if (pr > 0) parts.push('<span class="th-stars" aria-label="My rating ' + pr + ' of 5">' + '\u2605'.repeat(pr) + '<span class="th-stars-off">' + '\u2605'.repeat(5 - pr) + '</span></span>');
+  if (status) parts.push('<span class="th-status">' + status + '</span>');
+
+  document.getElementById('th-title').textContent = item.dataset.title || '';
+  document.getElementById('th-meta').innerHTML    = parts.join('<span class="th-dot">\u00b7</span>');
+  document.getElementById('th-plot').textContent  = plot;
+  hero.classList.remove('th-in');
+  void hero.offsetWidth;          // restart the fade-in
+  hero.classList.add('th-in');
+}
+
+/** Runs once focus has been still for ~100ms: background crossfade + preloading. */
+function _thSettled() {
+  const item = _thCurItem();
+  if (!item || !_theater.active) return;
+  _thSetBackground(item);
+  // Preload full-size posters for the focused card and its neighbours only
+  const row = _theater.rows[_theater.row];
+  [row.col, row.col + 1, row.col - 1].forEach(function (i) {
+    const it = row.items[i];
+    if (!it || _theater.preloaded.has(it.dataset.filename)) return;
+    _theater.preloaded.add(it.dataset.filename);
+    const im = new Image();
+    im.decoding = 'async';
+    im.src = _posterUrl(it.dataset.filename);
+  });
+}
+
+function _thSetBackground(item) {
+  const url   = _thumbUrl(item.dataset.filename);
+  const front = document.getElementById('th-bg-' + _theater.bgFront);
+  if (front.dataset.url === url) return;
+  const backKey = _theater.bgFront === 'a' ? 'b' : 'a';
+  const back    = document.getElementById('th-bg-' + backKey);
+  const probe   = new Image();
+  probe.onload = probe.onerror = function () {
+    if (_thCurItem() !== item) return;          // focus moved on meanwhile
+    back.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
+    back.dataset.url = url;
+    back.classList.add('th-bg-on');
+    front.classList.remove('th-bg-on');
+    _theater.bgFront = backKey;
+  };
+  probe.src = url;
+}
+
+function _thMove(dx, dy) {
+  if (!_theater.rows.length) return;
+  if (dy) {
+    const r = _theater.row + dy;
+    if (r < 0 || r >= _theater.rows.length) return;
+    _thFocus(r, _theater.rows[r].col);
+  } else {
+    _thFocus(_theater.row, _theater.rows[_theater.row].col + dx);
+  }
+}
+
+function _thOpen() {
+  const item = _thCurItem();
+  const img  = item?.querySelector('img');
+  if (img) openLightbox(img.src, img);
+}
+
+/** Keep theater focus on the poster the lightbox stepped to. */
+function _thSyncToItem(item) {
+  const row = _theater.rows[_theater.row];
+  const c = row ? row.items.indexOf(item) : -1;
+  if (c >= 0) _thFocus(_theater.row, c);
+}
+
+/** Drop a deleted poster from every row, keeping focus as close as possible. */
+function _thRemoveItem(item) {
+  const cur = { r: _theater.row, c: _theater.rows[_theater.row]?.col || 0 };
+  _theater.rows = _theater.rows
+    .map(function (row) { return Object.assign({}, row, { items: row.items.filter(function (i) { return i !== item; }) }); })
+    .filter(function (row) { return row.items.length; });
+  if (!_theater.rows.length) { exitTheater(); return; }
+  _thBuild();
+  _theater.row = Math.min(cur.r, _theater.rows.length - 1);
+  _thFocus(_theater.row, cur.c, { instant: true });
+}
+
+function _thOnRowScroll(r) {
+  if (!_theater.touch || performance.now() < _theater.ignoreScrollUntil) return;
+  const row = _theater.rows[r];
+  clearTimeout(row.scrollTimer);
+  row.scrollTimer = setTimeout(function () {
+    if (performance.now() < _theater.ignoreScrollUntil) return;
+    const pad  = parseFloat(getComputedStyle(row.track).paddingLeft) || 0;
+    const left = row.viewport.scrollLeft;
+    const cards = row.track.children;
+    let c = 0;
+    for (let i = 0; i < cards.length; i++) {
+      if (cards[i].offsetLeft + cards[i].offsetWidth / 2 >= left + pad) { c = i; break; }
+    }
+    if (r === _theater.row) {
+      if (c !== row.col) _thFocus(r, c, { reveal: false });
+    } else if (r === _theater.touchRow) {
+      _thFocus(r, c, { reveal: false });
+    } else {
+      row.col = c;   // e.g. a scroll-snap settle on another row — remember, don't steal focus
+    }
+  }, 140);
+}
+
+function _thOnRowsScroll() {
+  if (!_theater.touch || performance.now() < _theater.ignoreScrollUntil) return;
+  clearTimeout(_theater.vScrollTimer);
+  _theater.vScrollTimer = setTimeout(function () {
+    if (performance.now() < _theater.ignoreScrollUntil) return;
+    const top = document.getElementById('th-rows').scrollTop;
+    let best = 0, bestD = Infinity;
+    _theater.rows.forEach(function (row, r) {
+      const d = Math.abs(row.el.offsetTop - top);
+      if (d < bestD) { bestD = d; best = r; }
+    });
+    if (best !== _theater.row) _thFocus(best, _theater.rows[best].col, { reveal: false });
+  }, 140);
+}
+
+async function enterTheater() {
+  if (_theater.active || _theater.busy) return;
+  _theater.busy = true;
+  const theater = document.getElementById('theater');
+  closeLightbox();
+  toggleNavMenu(false);
+  document.getElementById('recent-dropdown')?.classList.remove('open');
+  document.getElementById('recent-toggle-btn')?.classList.remove('active');
+
+  // Fullscreen must be requested inside the click / key gesture, so start it first
+  const recentReq = fetch('/recently_added?limit=30')
+    .then(function (r) { return r.ok ? r.json() : []; })
+    .catch(function () { return []; });
+  const [, recent] = await Promise.all([_requestFullscreen(), recentReq]);
+
+  _theater.rows    = _thCollectRows(recent);
+  _theater.row     = 0;
+  _theater.scrollY = window.scrollY;
+  _theater.touch   = _coarseMQ.matches;
+  theater.classList.toggle('th-touch', _theater.touch);
+
+  // Morph: the grid container becomes the rows area; the first poster morphs too if visible
+  const grid   = document.querySelector('.grid-container');
+  const rowsEl = document.getElementById('th-rows');
+  const srcImg = _visibleGridImg(_theater.rows[0]?.items[0]);
+  if (grid)   grid.style.viewTransitionName   = 'th-grid';
+  if (srcImg) srcImg.style.viewTransitionName = 'th-poster';
+  let dstImg = null;
+
+  const usedVT = await _withViewTransition(function () {
+    if (grid)   grid.style.viewTransitionName   = '';
+    if (srcImg) srcImg.style.viewTransitionName = '';
+    _thBuild();
+    theater.hidden = false;
+    document.body.classList.add('theater-open');
+    document.getElementById('theater-btn')?.classList.add('active');
+    _theater.active = true;
+    _thFocus(0, 0, { instant: true });
+    rowsEl.style.viewTransitionName = 'th-grid';
+    if (srcImg) {
+      dstImg = _thCardEl(0, 0)?.querySelector('img');
+      if (dstImg) dstImg.style.viewTransitionName = 'th-poster';
+    }
+  });
+  rowsEl.style.viewTransitionName = '';
+  if (dstImg) dstImg.style.viewTransitionName = '';
+  if (!usedVT && !_reducedMotion()) {
+    theater.classList.add('th-fade-in');
+    setTimeout(function () { theater.classList.remove('th-fade-in'); }, 400);
+  }
+  _padStart();
+  _theater.busy = false;
+}
+
+async function exitTheater(opts) {
+  if (!_theater.active || _theater.busy) return;
+  _theater.busy = true;
+  const theater = document.getElementById('theater');
+  closeLightbox();
+  if (!(opts && opts.fromFullscreenChange)) await _exitFullscreen();
+
+  const item   = _thCurItem();
+  const grid   = document.querySelector('.grid-container');
+  const rowsEl = document.getElementById('th-rows');
+  const card   = _thCardEl(_theater.row, _theater.rows[_theater.row]?.col)?.querySelector('img');
+  rowsEl.style.viewTransitionName = 'th-grid';
+  if (card) card.style.viewTransitionName = 'th-poster';
+  let dstImg = null;
+
+  await _withViewTransition(function () {
+    rowsEl.style.viewTransitionName = '';
+    if (card) card.style.viewTransitionName = '';
+    theater.hidden = true;
+    document.body.classList.remove('theater-open');
+    document.getElementById('theater-btn')?.classList.remove('active');
+    _theater.active = false;
+    window.scrollTo({ top: _theater.scrollY, behavior: 'instant' });
+    if (grid) grid.style.viewTransitionName = 'th-grid';
+    dstImg = _visibleGridImg(item);
+    if (dstImg) dstImg.style.viewTransitionName = 'th-poster';
+  });
+  if (grid) grid.style.viewTransitionName = '';
+  if (dstImg) dstImg.style.viewTransitionName = '';
+  document.getElementById('th-rows-track').innerHTML = '';
+  _theater.rows = [];
+  _theater.busy = false;
+}
+
+/** Arrow keys / WASD / Enter inside theater. Returns true if the key was used. */
+function _thHandleKey(e) {
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  const moves = {
+    ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0],
+    ArrowUp:   [0, -1], w: [0, -1], ArrowDown:  [0, 1], s: [0, 1],
+  };
+  if (moves[k]) {
+    _thSetTouch(false);
+    _thMove(moves[k][0], moves[k][1]);
+    return true;
+  }
+  if (k === 'Enter' || k === ' ') { _thOpen(); return true; }
+  if (k === 'Home') { _thFocus(_theater.row, 0); return true; }
+  if (k === 'End')  { _thFocus(_theater.row, Infinity); return true; }
+  return false;
+}
+
+function _thInit() {
+  const theater = document.getElementById('theater');
+  const rowsEl  = document.getElementById('th-rows');
+  if (!theater || !rowsEl) return;
+
+  // Click / tap a card. Touch: first tap focuses, second opens. Mouse: opens.
+  rowsEl.addEventListener('click', function (e) {
+    const card = e.target.closest('.th-card');
+    if (!card) return;
+    const r = parseInt(card.closest('.th-row').dataset.row, 10);
+    const c = parseInt(card.dataset.col, 10);
+    const already = r === _theater.row && c === _theater.rows[r].col;
+    _theater.rows.forEach(function (row) { clearTimeout(row.scrollTimer); });
+    clearTimeout(_theater.vScrollTimer);
+    _theater.ignoreScrollUntil = performance.now() + 700;
+    if (!already) _thFocus(r, c, { reveal: 'ifneeded' });
+    if (already || !_theater.touch) _thOpen();
+  });
+
+  // Mouse hover focuses — but only after real pointer movement, so the row
+  // sliding under a stationary cursor doesn't steal focus back.
+  theater.addEventListener('pointermove', function (e) {
+    if (e.pointerType !== 'mouse' || (!e.movementX && !e.movementY)) return;
+    _theater.lastMouse = performance.now();
+    if (_theater.touch) _thSetTouch(false);
+  });
+  rowsEl.addEventListener('pointerover', function (e) {
+    if (e.pointerType !== 'mouse' || _theater.touch || performance.now() - _theater.lastMouse > 150) return;
+    const card = e.target.closest('.th-card');
+    if (!card) return;
+    const r = parseInt(card.closest('.th-row').dataset.row, 10);
+    const c = parseInt(card.dataset.col, 10);
+    if (r !== _theater.row || c !== _theater.rows[r].col) _thFocus(r, c, { reveal: 'ifneeded' });
+  });
+
+  theater.addEventListener('touchstart', function (e) {
+    const rowEl = e.target.closest && e.target.closest('.th-row');
+    _theater.touchRow = rowEl ? parseInt(rowEl.dataset.row, 10) : -1;
+    _thSetTouch(true);
+  }, { passive: true });
+  rowsEl.addEventListener('scroll', _thOnRowsScroll, { passive: true });
+
+  // Wheel: vertical → change row, horizontal / shift → change column
+  rowsEl.addEventListener('wheel', function (e) {
+    if (_theater.touch) return;
+    e.preventDefault();
+    const horiz = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
+    const d = horiz ? (e.deltaX || e.deltaY) : e.deltaY;
+    const now = performance.now();
+    if (Math.abs(d) < 4 || now - _theater.wheelAt < (horiz ? 90 : 220)) return;
+    _theater.wheelAt = now;
+    if (horiz) _thMove(d > 0 ? 1 : -1, 0); else _thMove(0, d > 0 ? 1 : -1);
+  }, { passive: false });
+
+  let resizeT = 0;
+  window.addEventListener('resize', function () {
+    if (!_theater.active) return;
+    clearTimeout(resizeT);
+    resizeT = setTimeout(function () { _thRevealAll(true); }, 120);
+  });
+
+  // Leaving fullscreen by other means (browser UI, F11, Esc without keyboard lock) exits theater
+  document.addEventListener('fullscreenchange', function () {
+    if (!document.fullscreenElement && _theater.active && !_theater.busy) {
+      exitTheater({ fromFullscreenChange: true });
+    }
+  });
+
+  window.addEventListener('gamepadconnected', function () {
+    _padStart();
+    if (_theater.active) showToast('\uD83C\uDFAE Gamepad connected');
+  });
+}
+
+// ── Gamepad (standard mapping) ────────────────────────────────────────────────
+// D-pad 12–15 / left stick → move · A (0) → open · B (1) → back · Start (9) → theater
+
+const _pad = { raf: 0, dir: '', since: 0, last: 0, btn: {} };
+
+function _padStart() {
+  if (!_pad.raf && navigator.getGamepads) _pad.raf = requestAnimationFrame(_padTick);
+}
+
+function _padTick(t) {
+  const gp = Array.from(navigator.getGamepads ? navigator.getGamepads() : []).find(Boolean);
+  if (!gp && !_theater.active) { _pad.raf = 0; return; }   // idle: stop polling
+  _pad.raf = requestAnimationFrame(_padTick);
+  if (!gp) return;
+
+  const b  = function (i) { return !!(gp.buttons[i] && gp.buttons[i].pressed); };
+  const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
+  let dir = '';
+  if      (b(12)) dir = 'up';
+  else if (b(13)) dir = 'down';
+  else if (b(14)) dir = 'left';
+  else if (b(15)) dir = 'right';
+  else if (Math.max(Math.abs(ax), Math.abs(ay)) > 0.5) {
+    dir = Math.abs(ax) > Math.abs(ay) ? (ax < 0 ? 'left' : 'right') : (ay < 0 ? 'up' : 'down');
+  }
+  // Fire once on press, then auto-repeat after 380ms every 110ms
+  if (dir !== _pad.dir) {
+    _pad.dir = dir; _pad.since = _pad.last = t;
+    if (dir) _padAction(dir);
+  } else if (dir && t - _pad.since > 380 && t - _pad.last > 110) {
+    _pad.last = t;
+    _padAction(dir);
+  }
+  [[0, 'open'], [1, 'back'], [9, 'start']].forEach(function (pair) {
+    const pressed = b(pair[0]);
+    if (pressed && !_pad.btn[pair[0]]) _padAction(pair[1]);
+    _pad.btn[pair[0]] = pressed;
+  });
+}
+
+function _padAction(act) {
+  const lbOpen = document.getElementById('lightbox')?.classList.contains('show');
+  if (lbOpen) {
+    if (act === 'left')  lightboxStep(-1);
+    if (act === 'right') lightboxStep(1);
+    if (act === 'back')  closeLightbox();
+    return;
+  }
+  if (!_theater.active) { if (act === 'start') enterTheater(); return; }
+  _thSetTouch(false);
+  if (act === 'left')  _thMove(-1, 0);
+  if (act === 'right') _thMove(1, 0);
+  if (act === 'up')    _thMove(0, -1);
+  if (act === 'down')  _thMove(0, 1);
+  if (act === 'open')  _thOpen();
+  if (act === 'back' || act === 'start') exitTheater();
+}
+
 // ── DOMContentLoaded ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function () {
   // Restore saved card size
@@ -1981,24 +2597,39 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('recent-toggle-btn')?.classList.remove('active');
       } else if (document.getElementById('nav-menu')?.classList.contains('open')) {
         toggleNavMenu(false);
-      } else {
+      } else if (document.getElementById('lightbox')?.classList.contains('show')) {
         closeLightbox();
+      } else if (_theater.active) {
+        exitTheater();
       }
       return;
     }
 
     if (typing) return;
     const lbOpen = document.getElementById('lightbox')?.classList.contains('show');
+    const modalOpen = document.querySelector('.modal-overlay.show');
+    if (modalOpen) return;
+
+    if ((e.key === 'b' || e.key === 'B') && !e.ctrlKey && !e.metaKey && !e.altKey && !lbOpen) {
+      e.preventDefault();
+      toggleTheater();
+      return;
+    }
+    if (_theater.active && !lbOpen) {
+      if (_thHandleKey(e)) e.preventDefault();
+      return;
+    }
     if (e.key === 'ArrowRight') { if (lbOpen) lightboxStep(1);  else changePage(1); }
     if (e.key === 'ArrowLeft')  { if (lbOpen) lightboxStep(-1); else changePage(-1); }
   });
 
   document.getElementById('closeLightbox')?.addEventListener('click', closeLightbox);
   _initLightboxSwipe();
+  _thInit();
 
   // Mobile nav menu: close after picking an action, or on outside tap
   document.getElementById('nav-menu')?.addEventListener('click', function (e) {
-    if (e.target.closest('.nav-filter-btn, .nav-group-view-btn, .nav-recent-btn, .nav-upload-btn, .nav-link')) {
+    if (e.target.closest('.nav-filter-btn, .nav-group-view-btn, .nav-recent-btn, .nav-upload-btn, .nav-link, .nav-feature-group button')) {
       toggleNavMenu(false);
     }
   });

@@ -707,7 +707,11 @@ def recently_added():
     entries.sort(key=lambda x: x["mtime"], reverse=True)
     for r in entries:
         del r["mtime"]          # client doesn't need the raw timestamp
-    return jsonify(entries[:RECENT_COUNT])
+    try:
+        limit = max(1, min(int(request.args.get("limit", RECENT_COUNT)), 100))
+    except ValueError:
+        limit = RECENT_COUNT
+    return jsonify(entries[:limit])
 
 
 @main_bp.route("/save_zoom", methods=["POST"])

@@ -96,6 +96,18 @@
       Group View
     </button>
 
+    <!-- Feature buttons: icon-only in the desktop bar, labelled in the collapsed menu -->
+    <div class="nav-feature-group">
+      <button class="nav-icon-btn nav-theater-btn" id="theater-btn" onclick="toggleTheater()"
+              title="Theater mode (B)" aria-label="Theater mode">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="4" width="20" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+        <span class="nav-btn-label">Theater</span>
+      </button>
+    </div>
+
     <div class="nav-actions">
       <button class="nav-upload-btn" onclick="openUploadModal()">+ Add Poster</button>
       <button class="nav-icon-btn theme-btn" onclick="toggleDarkMode()" title="Toggle theme" aria-label="Toggle dark/light mode">
@@ -150,6 +162,37 @@
       <button id="nextBtn" class="page-btn primary" onclick="changePage(1)" aria-label="Next page">Next ›</button>
     </div>
   </section>
+
+  <!-- ══════════════════════════════════════════════════════
+       THEATER MODE (Big Picture style) — rows built by JS on enter
+  ══════════════════════════════════════════════════════ -->
+  <div id="theater" class="theater" hidden role="dialog" aria-modal="true" aria-label="Theater mode">
+    <div class="th-bg" id="th-bg-a"></div>
+    <div class="th-bg" id="th-bg-b"></div>
+    <div class="th-vignette"></div>
+
+    <header class="th-top">
+      <span class="th-brand">MOVIEDB <span class="th-brand-sub">THEATER</span></span>
+      <button class="th-exit" onclick="toggleTheater()" aria-label="Exit theater mode">&#x2715;<span class="th-exit-label">Exit</span></button>
+    </header>
+
+    <section class="th-hero" id="th-hero" aria-live="polite">
+      <h1 class="th-title" id="th-title"></h1>
+      <div class="th-meta" id="th-meta"></div>
+      <p class="th-plot" id="th-plot"></p>
+    </section>
+
+    <div class="th-rows" id="th-rows">
+      <div class="th-rows-track" id="th-rows-track"></div>
+    </div>
+
+    <footer class="th-hints" aria-hidden="true">
+      <span><kbd>&#8592;</kbd><kbd>&#8593;</kbd><kbd>&#8595;</kbd><kbd>&#8594;</kbd> / <kbd>WASD</kbd> Move</span>
+      <span><kbd>Enter</kbd> Open</span>
+      <span><kbd>Esc</kbd> Back</span>
+      <span class="th-hint-pad">&#127918; Gamepad ready</span>
+    </footer>
+  </div>
 
   <!-- ══════════════════════════════════════════════════════
        UPLOAD MODAL

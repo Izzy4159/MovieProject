@@ -17,6 +17,23 @@ Every poster is handpicked, converted to `.webp`, and laid out in a responsive g
 ### Recently Added
 - **Recently Added Dropdown** — nav bar button reveals the 12 most recently modified posters, fetched live from the filesystem on every open so newly uploaded or manually added posters always appear at the top
 
+### Theater Mode (Big Picture style)
+- **Enter / exit** — the 📺 button in the nav, the **`B`** key, or **Start** on a gamepad. Goes fullscreen on enter (where the browser allows it) and leaves fullscreen on exit
+- **Morphing transition** — uses the View Transitions API so the grid morphs into the rows (and the first poster morphs into its card when it's on screen); browsers without the API, or with reduced motion on, just switch instantly
+- **Rows** — Recently Added, Want to Watch, Watched, Top Rated (your personal stars), then one row per collection. Built from the same data the grid uses, so nothing extra is fetched except the Recently Added list
+- **Focus** — the focused poster scales up with a glow; the page background crossfades to a heavily blurred, darkened copy of it, and its title, year, IMDb rating, your rating, watch status and plot fade in beside it
+- **Controls**
+
+  | Action | Keyboard | Gamepad | Touch / mouse |
+  |---|---|---|---|
+  | Move | `←` `↑` `↓` `→` or `W` `A` `S` `D` | D-pad or left stick | Swipe rows / hover, mouse wheel |
+  | Open lightbox | `Enter` | **A** | Tap a focused card / click |
+  | Back (close lightbox, then exit) | `Esc` | **B** | ✕ Exit button |
+  | Toggle theater | `B` | **Start** | 📺 nav button |
+
+  Inside the lightbox, `←` / `→` (or the D-pad) step through the current row. In fullscreen, Chrome/Edge use the Keyboard Lock API so `Esc` closes the lightbox first instead of dropping out of fullscreen.
+- **Smooth** — with keyboard, mouse or gamepad the rows move with GPU `transform`s; on touch they switch to native scrolling with `scroll-snap`. Only the focused poster and its immediate neighbours have their full-size images preloaded
+
 ### Mobile & Installable App
 - **Phone layout** — under 700 px the grid becomes fluid (the size slider sets the minimum column width), every touch target is at least 44 px, and hover-only controls are revealed for touch
 - **Collapsible nav** — below ~1350 px (where the full toolbar no longer fits) the nav shrinks to brand + search + a ☰ menu holding filters, size, Group View, Recently Added, upload and theme
@@ -65,7 +82,8 @@ Every poster is handpicked, converted to `.webp`, and laid out in a responsive g
 | `Python` + `Flask` | Backend server, routing, API integration, caching |
 | `HTML5` + `Jinja2` | Page structure and template rendering |
 | `CSS3` | Responsive grid, animations, dark/light mode, custom properties |
-| `JavaScript` | Lightbox, pagination, search, upload, collections, group view |
+| `JavaScript` | Lightbox, pagination, search, upload, collections, group view, theater mode |
+| View Transitions / Fullscreen / Gamepad APIs | Theater mode morph, fullscreen, controller input |
 | `OMDb API` | Movie/TV metadata (title, year, rating, plot) |
 | `Jikan API` | Anime metadata from MyAnimeList |
 | `difflib` | Fuzzy title matching between filenames and API results |
@@ -107,7 +125,7 @@ MovieProject/
 │   └── thumbs/              # Generated 400px grid thumbnails (git-ignored)
 │
 ├── static/
-│   ├── style.css            # Grid, lightbox, animations, dark/light mode, group view, mobile
+│   ├── style.css            # Grid, lightbox, theater, animations, dark/light mode, group view, mobile
 │   ├── script.js            # All client-side logic
 │   ├── sw.js                # Service worker (served at /sw.js; caches /static/* only)
 │   ├── manifest.webmanifest # PWA manifest (served at /manifest.webmanifest)
