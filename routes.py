@@ -749,8 +749,8 @@ def cache_entries():
     for key, entry in CACHE.items():
         if not isinstance(entry, dict):
             continue
-        title = (entry.get("title") or "").strip()
-        year  = (entry.get("year")  or "").strip()
+        title = str(entry.get("title") or "").strip()
+        year  = str(entry.get("year")  or "").strip()
         if not title:
             continue
         dedup = (title.lower(), year)
