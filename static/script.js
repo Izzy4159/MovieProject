@@ -2022,6 +2022,7 @@ function _thBuild() {
       card.tabIndex    = -1;
       card.dataset.col = c;
       card.setAttribute('aria-label', item.dataset.title || '');
+      if (item.dataset.color) card.style.setProperty('--th-glow', _hexToRgba(item.dataset.color, 0.7));
       const img = document.createElement('img');
       img.src       = _thumbUrl(item.dataset.filename);
       img.alt       = '';
@@ -2191,13 +2192,16 @@ function _thSettled() {
 function _thSetBackground(item) {
   const url   = _thumbUrl(item.dataset.filename);
   const front = document.getElementById('th-bg-' + _theater.bgFront);
-  if (front.dataset.url === url) return;
+  if (front.dataset.url === url) return;   // (colour is per poster, so url is enough)
   const backKey = _theater.bgFront === 'a' ? 'b' : 'a';
   const back    = document.getElementById('th-bg-' + backKey);
   const probe   = new Image();
   probe.onload = probe.onerror = function () {
     if (_thCurItem() !== item) return;          // focus moved on meanwhile
-    back.style.backgroundImage = 'url("' + url.replace(/"/g, '%22') + '")';
+    // Tint layered over the poster, so the crossfade is still opacity-only
+    const tint = item.dataset.color ? _hexToRgba(item.dataset.color, 0.38) : 'rgba(0,0,0,0)';
+    back.style.backgroundImage =
+      'linear-gradient(' + tint + ',' + tint + '), url("' + url.replace(/"/g, '%22') + '")';
     back.dataset.url = url;
     back.classList.add('th-bg-on');
     front.classList.remove('th-bg-on');
@@ -2295,6 +2299,7 @@ async function enterTheater() {
     .catch(function () { return []; });
   const [, recent] = await Promise.all([_requestFullscreen(), recentReq]);
 
+  await _refreshPosterColors();
   _theater.rows    = _thCollectRows(recent);
   _theater.row     = 0;
   _theater.scrollY = window.scrollY;
@@ -2501,6 +2506,10 @@ function _padTick(t) {
 }
 
 function _padAction(act) {
+  if (!document.getElementById('spin-overlay')?.hidden) {
+    if (act === 'back') closeSpin();
+    return;
+  }
   const lbOpen = document.getElementById('lightbox')?.classList.contains('show');
   if (lbOpen) {
     if (act === 'left')  lightboxStep(-1);
@@ -2516,6 +2525,153 @@ function _padAction(act) {
   if (act === 'down')  _thMove(0, 1);
   if (act === 'open')  _thOpen();
   if (act === 'back' || act === 'start') exitTheater();
+}
+
+// ── Poster colours (dominant colour per poster, from /poster_colors) ─────────
+
+function _hexToRgba(hex, a) {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || '');
+  if (!m) return '';
+  return 'rgba(' + parseInt(m[1], 16) + ',' + parseInt(m[2], 16) + ',' + parseInt(m[3], 16) + ',' + a + ')';
+}
+
+function _setItemColor(item, color) {
+  if (!color) return;
+  item.dataset.color = color;
+  item.style.setProperty('--pc', color);
+}
+
+/** Fill in colours the server computed after this page was rendered. */
+async function _refreshPosterColors() {
+  const missing = Array.from(document.querySelectorAll('.grid-item')).filter(function (i) { return !i.dataset.color; });
+  if (!missing.length) return;
+  try {
+    const resp = await fetch('/poster_colors');
+    if (!resp.ok) return;
+    const colors = await resp.json();
+    missing.forEach(function (i) { _setItemColor(i, colors[i.dataset.filename]); });
+  } catch (_) { /* colours are decorative */ }
+}
+
+// ── 3D tilt on hover (mouse / trackpad only) ──────────────────────────────────
+
+function _initTilt() {
+  const grid = document.querySelector('.grid-container');
+  if (!grid) return;
+  const fineMQ = window.matchMedia('(hover: hover) and (pointer: fine)');
+  let raf = 0, pending = null;
+
+  function apply() {
+    raf = 0;
+    if (!pending) return;
+    const item = pending.item;
+    const r  = item.getBoundingClientRect();
+    const px = (pending.x - r.left) / r.width  - 0.5;   // -0.5 … 0.5
+    const py = (pending.y - r.top)  / r.height - 0.5;
+    item.style.setProperty('--ry', (px * 14).toFixed(2) + 'deg');
+    item.style.setProperty('--rx', (-py * 14).toFixed(2) + 'deg');
+  }
+  grid.addEventListener('pointermove', function (e) {
+    if (e.pointerType !== 'mouse' || !fineMQ.matches || _reducedMotion()) return;
+    const item = e.target.closest('.grid-item');
+    if (!item || item.dataset.editing === 'true') return;
+    pending = { item: item, x: e.clientX, y: e.clientY };
+    if (!raf) raf = requestAnimationFrame(apply);
+  });
+  grid.addEventListener('pointerout', function (e) {
+    const item = e.target.closest('.grid-item');
+    if (!item || item.contains(e.relatedTarget)) return;
+    item.style.removeProperty('--rx');
+    item.style.removeProperty('--ry');
+    if (pending && pending.item === item) pending = null;
+  });
+}
+
+// ── "What should I watch?" slot machine ───────────────────────────────────────
+
+const _spin = { anim: null, timer: 0 };
+
+function openSpin() {
+  const items  = Array.from(document.querySelectorAll('.grid-item'));
+  let pool     = items.filter(function (i) { return i.dataset.watched === 'want_to_watch'; });
+  let sub      = pool.length + ' poster' + (pool.length === 1 ? '' : 's') + ' in Want to Watch';
+  if (!pool.length) {
+    pool = items.filter(function (i) { return !i.dataset.watched; });
+    sub  = 'Want to Watch is empty \u2014 picking from your unwatched posters';
+  }
+  if (!pool.length) { showToast('Nothing left to pick from \u2014 everything is watched!'); return; }
+
+  closeLightbox();
+  toggleNavMenu(false);
+  const overlay = document.getElementById('spin-overlay');
+  const reel    = document.getElementById('spin-reel');
+  const win     = document.getElementById('spin-window');
+  const frame   = document.getElementById('spin-frame');
+  const result  = document.getElementById('spin-result');
+  document.getElementById('spin-sub').textContent = sub;
+  result.textContent = '';
+  frame.classList.remove('spin-landed');
+  overlay.hidden = false;
+
+  // Reel: a shuffled run of posters ending on the pick, plus two after it to peek below
+  const pick  = pool[Math.floor(Math.random() * pool.length)];
+  const cells = [];
+  const run   = Math.max(28, Math.min(44, pool.length * 3));
+  for (let i = 0; i < run; i++) cells.push(pool[Math.floor(Math.random() * pool.length)]);
+  cells.push(pick);
+  const pickIdx = cells.length - 1;
+  cells.push(pool[Math.floor(Math.random() * pool.length)], pool[Math.floor(Math.random() * pool.length)]);
+
+  reel.innerHTML = '';
+  cells.forEach(function (item) {
+    const cell = document.createElement('div');
+    cell.className = 'spin-cell';
+    const img = document.createElement('img');
+    img.src = _thumbUrl(item.dataset.filename);
+    img.alt = '';
+    img.width = 400; img.height = 600;
+    img.decoding = 'async';
+    cell.appendChild(img);
+    reel.appendChild(cell);
+  });
+  const pre = new Image();
+  pre.src = _posterUrl(pick.dataset.filename);       // full-size ready for the lightbox
+
+  const cell  = reel.firstElementChild;
+  const step  = cell.offsetHeight + parseFloat(getComputedStyle(reel).rowGap || 0);
+  const offset = (win.clientHeight - cell.offsetHeight) / 2;
+  const endY  = -(pickIdx * step) + offset;
+  const color = pick.dataset.color;
+  frame.style.setProperty('--spin-glow', color ? _hexToRgba(color, 0.75) : 'rgba(245,200,66,0.7)');
+
+  function land() {
+    _spin.anim = null;
+    reel.style.transform = 'translate3d(0,' + endY + 'px,0)';
+    frame.classList.add('spin-landed');
+    const yr = pick.dataset.year && pick.dataset.year !== 'N/A' ? ' (' + pick.dataset.year + ')' : '';
+    result.textContent = (pick.dataset.title || '') + yr;
+    _spin.timer = setTimeout(function () {
+      closeSpin();
+      const img = pick.querySelector('img');
+      if (img) openLightbox(img.src, img);
+    }, _reducedMotion() ? 500 : 1100);
+  }
+
+  if (_reducedMotion() || !reel.animate) { land(); return; }
+  _spin.anim = reel.animate(
+    [{ transform: 'translate3d(0,' + offset + 'px,0)' }, { transform: 'translate3d(0,' + endY + 'px,0)' }],
+    { duration: 3800, easing: 'cubic-bezier(0.08, 0.72, 0.14, 1)', fill: 'forwards' }
+  );
+  _spin.anim.onfinish = land;
+}
+
+function closeSpin() {
+  clearTimeout(_spin.timer);
+  if (_spin.anim) { _spin.anim.onfinish = null; _spin.anim.cancel(); _spin.anim = null; }
+  const overlay = document.getElementById('spin-overlay');
+  if (overlay) overlay.hidden = true;
+  const reel = document.getElementById('spin-reel');
+  if (reel) { reel.innerHTML = ''; reel.style.transform = ''; }
 }
 
 // ── DOMContentLoaded ──────────────────────────────────────────────────────────
@@ -2584,6 +2740,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const active = document.activeElement;
     const typing = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
 
+    const spinOpen = !document.getElementById('spin-overlay')?.hidden;
+    if (spinOpen) {
+      if (e.key === 'Escape') closeSpin();
+      return;
+    }
+
     if (e.key === 'Escape') {
       const modal    = document.getElementById('upload-modal');
       const dropdown = document.getElementById('recent-dropdown');
@@ -2626,10 +2788,17 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('closeLightbox')?.addEventListener('click', closeLightbox);
   _initLightboxSwipe();
   _thInit();
+  _initTilt();
+  _refreshPosterColors();
+
+  // Click outside the reel card closes the spin
+  document.getElementById('spin-overlay')?.addEventListener('click', function (e) {
+    if (e.target === this) closeSpin();
+  });
 
   // Mobile nav menu: close after picking an action, or on outside tap
   document.getElementById('nav-menu')?.addEventListener('click', function (e) {
-    if (e.target.closest('.nav-filter-btn, .nav-group-view-btn, .nav-recent-btn, .nav-upload-btn, .nav-link, .nav-feature-group button')) {
+    if (e.target.closest('.nav-filter-btn, .nav-group-view-btn, .nav-recent-btn, .nav-upload-btn, .nav-link, .nav-feature-group > *')) {
       toggleNavMenu(false);
     }
   });

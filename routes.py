@@ -2,7 +2,8 @@ import os, json, time, re, threading
 from urllib.parse import quote
 from flask import Blueprint, send_from_directory, render_template, request, jsonify, url_for
 from data import get_movie_info, parse_filename, norm_key, cache as data_cache
-from thumbs import ensure_thumb, remove_thumb, rename_thumb, THUMBS_DIR
+from thumbs import (ensure_thumb, remove_thumb, rename_thumb, THUMBS_DIR,
+                    get_color, compute_color, all_colors)
 
 main_bp = Blueprint("main", __name__)
 
@@ -131,6 +132,18 @@ def _run_backfill(misses):
         _save_cache(CACHE)
         _GRID_CACHE['html'] = ''  # invalidate so next request regenerates with new data
 
+_COLOR_BACKFILL = {"running": False}
+
+def _run_color_backfill(names):
+    """Background thread: compute dominant colours for posters that don't have one yet."""
+    try:
+        for name in names:
+            compute_color(name)
+        _GRID_CACHE['html'] = ''   # next page load embeds the new colours
+        print(f"[COLORS] computed {len(names)} poster colours")
+    finally:
+        _COLOR_BACKFILL["running"] = False
+
 def html_escape(s) -> str:
     if s is None:
         return ""
@@ -248,6 +261,7 @@ def generate_grid_items():
 
     grid_items = []
     misses = []  # (poster_filename, title_guess, year)
+    color_misses = []
 
     for i, poster in enumerate(poster_files):
         base_name          = os.path.splitext(poster)[0]
@@ -268,17 +282,22 @@ def generate_grid_items():
         personal_rating = int(ratings.get(poster, 0))
         collection      = collections.get(poster, "")
         zoom            = round(float(zooms.get(poster, 1.0)), 3)
+        color           = get_color(poster)
+        if not color:
+            color_misses.append(poster)
         page = i // ITEMS_PER_PAGE + 1
 
+        style = "display:none;" + (f"--pc:{color};" if color else "")
         item_html = (
-            f'<div class="grid-item page-{page}" style="display:none;"'
+            f'<div class="grid-item page-{page}" style="{style}"'
             f' data-title="{html_escape(title)}" data-year="{html_escape(yr)}"'
             f' data-rating="{html_escape(rating)}" data-plot="{html_escape(plot)}"'
             f' data-filename="{html_escape(poster)}"'
             f' data-watched="{html_escape(watch_status)}"'
             f' data-personal-rating="{personal_rating}"'
             f' data-collection="{html_escape(collection)}"'
-            f' data-zoom="{zoom}">'
+            f' data-zoom="{zoom}"'
+            f' data-color="{color or ""}">'
             f'<img loading="lazy" decoding="async" fetchpriority="low"'
             f' width="400" height="600"'
             f' src="/thumbs/{quote(poster)}"'
@@ -294,6 +313,9 @@ def generate_grid_items():
     # Fire backfill in a daemon thread — does not block the response
     if misses:
         threading.Thread(target=_run_backfill, args=(misses,), daemon=True).start()
+    if color_misses and not _COLOR_BACKFILL["running"]:
+        _COLOR_BACKFILL["running"] = True
+        threading.Thread(target=_run_color_backfill, args=(color_misses,), daemon=True).start()
 
     print(f"[FAST] grid in {time.time()-start_time:.2f}s ({len(misses)} queued for backfill)")
     return html
@@ -322,6 +344,11 @@ def thumb(filename):
     if not path:
         return jsonify(error="Poster not found"), 404
     return send_from_directory(THUMBS_DIR, os.path.basename(path), max_age=60*60*24*7)
+
+@main_bp.route("/poster_colors")
+def poster_colors():
+    """{filename: "#rrggbb"} for every poster whose dominant colour is known."""
+    return jsonify(all_colors())
 
 # ── PWA ───────────────────────────────────────────────────────────────────────
 
@@ -671,6 +698,67 @@ def collection_groups():
             if t:
                 groups.add(t)
     return jsonify(sorted(groups, key=str.lower))
+
+
+# ── Stats page ────────────────────────────────────────────────────────────────
+
+def _compute_stats():
+    watched     = _load_watched()
+    ratings     = _load_ratings()
+    collections = _load_collections()
+
+    posters = []
+    if os.path.isdir(POSTERS_DIR):
+        with os.scandir(POSTERS_DIR) as it:
+            posters = [e.name for e in it if e.is_file() and e.name.lower().endswith(".webp")]
+
+    decades, unique = {}, set()
+    for fn in posters:
+        title_guess, year = _parse_poster_filename(os.path.splitext(fn)[0])
+        info  = _lookup_cache(fn, title_guess, year) or {}
+        title = (info.get("title") or title_guess or "").strip().lower()
+        m     = re.search(r"(1[89]\d\d|20\d\d)", str(info.get("year") or year or ""))
+        yr    = int(m.group(1)) if m else None
+        unique.add((title, yr))
+        key = f"{yr // 10 * 10}s" if yr else "Unknown"
+        decades[key] = decades.get(key, 0) + 1
+
+    total      = len(posters)
+    names      = set(posters)
+    n_watched  = sum(1 for fn, s in watched.items() if s == "watched" and fn in names)
+    n_want     = sum(1 for fn, s in watched.items() if s == "want_to_watch" and fn in names)
+    rated      = [int(v) for fn, v in ratings.items() if fn in names and int(v) > 0]
+    stars      = {i: rated.count(i) for i in range(1, 6)}
+
+    sizes = {}
+    for fn, g in collections.items():
+        if fn in names and g:
+            sizes[g] = sizes.get(g, 0) + 1
+    largest = sorted(sizes.items(), key=lambda kv: (-kv[1], kv[0].lower()))[:10]
+
+    decade_rows = sorted(((k, v) for k, v in decades.items() if k != "Unknown"), key=lambda kv: kv[0])
+    if "Unknown" in decades:
+        decade_rows.append(("Unknown", decades["Unknown"]))
+
+    return {
+        "total":        total,
+        "unique":       len(unique),
+        "watched":      n_watched,
+        "watched_pct":  round(100 * n_watched / total, 1) if total else 0,
+        "want":         n_want,
+        "rated":        len(rated),
+        "avg_rating":   round(sum(rated) / len(rated), 2) if rated else None,
+        "stars":        stars,
+        "decades":      decade_rows,
+        "decade_max":   max([v for _, v in decade_rows] or [1]),
+        "collections":  largest,
+        "coll_max":     max([v for _, v in largest] or [1]),
+        "n_collections": len(sizes),
+    }
+
+@main_bp.route("/stats")
+def stats():
+    return render_template("stats.html", s=_compute_stats())
 
 
 RECENT_COUNT = 12

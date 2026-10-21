@@ -34,6 +34,12 @@ Every poster is handpicked, converted to `.webp`, and laid out in a responsive g
   Inside the lightbox, `←` / `→` (or the D-pad) step through the current row. In fullscreen, Chrome/Edge use the Keyboard Lock API so `Esc` closes the lightbox first instead of dropping out of fullscreen.
 - **Smooth** — with keyboard, mouse or gamepad the rows move with GPU `transform`s; on touch they switch to native scrolling with `scroll-snap`. Only the focused poster and its immediate neighbours have their full-size images preloaded
 
+### Fun Extras
+- **"What should I watch?"** — the 🎲 *Pick for me* button spins a slot-machine reel through your Want to Watch posters, decelerates, lands on a random pick (glowing in that poster's colour), then opens its lightbox. If Want to Watch is empty it picks from your unwatched posters instead. `Esc` cancels
+- **Poster colours** — each poster's dominant colour is extracted with Pillow when its thumbnail is built and cached in `posters/thumbs/colors.json`; it drives the grid hover glow, the theater focus glow, and the theater backdrop tint
+- **3D tilt** — posters tilt subtly toward the cursor on hover (mouse/trackpad only; off for touch and reduced motion)
+- **Stats page** (`/stats`, 📊 in the nav) — total posters and unique titles, watched count and percentage, Want to Watch count, average personal rating, posters by decade, your rating distribution, and the largest collections; every chart has a hover tooltip and a "Show as table" view
+
 ### Mobile & Installable App
 - **Phone layout** — under 700 px the grid becomes fluid (the size slider sets the minimum column width), every touch target is at least 44 px, and hover-only controls are revealed for touch
 - **Collapsible nav** — below ~1350 px (where the full toolbar no longer fits) the nav shrinks to brand + search + a ☰ menu holding filters, size, Group View, Recently Added, upload and theme
@@ -87,7 +93,7 @@ Every poster is handpicked, converted to `.webp`, and laid out in a responsive g
 | `OMDb API` | Movie/TV metadata (title, year, rating, plot) |
 | `Jikan API` | Anime metadata from MyAnimeList |
 | `difflib` | Fuzzy title matching between filenames and API results |
-| `Pillow` | `.webp` conversion on upload, grid thumbnails |
+| `Pillow` | `.webp` conversion on upload, grid thumbnails, dominant-colour extraction |
 | Web App Manifest + Service Worker | Installable PWA, static-asset caching |
 | `Flask-Compress` | Optional gzip/brotli compression |
 | `Git` / `GitHub` | Version control |
@@ -122,7 +128,7 @@ MovieProject/
 │   ├── Alien (1979).webp
 │   ├── Dune Part Two (2024).webp
 │   ├── … (hundreds more)
-│   └── thumbs/              # Generated 400px grid thumbnails (git-ignored)
+│   └── thumbs/              # Generated 400px grid thumbnails + colors.json (git-ignored)
 │
 ├── static/
 │   ├── style.css            # Grid, lightbox, theater, animations, dark/light mode, group view, mobile
@@ -132,7 +138,8 @@ MovieProject/
 │   └── icons/               # App icons (192, 512, maskable, apple-touch)
 │
 ├── templates/
-│   └── index.html           # Jinja2 template — injects poster grid
+│   ├── index.html           # Jinja2 template — injects poster grid
+│   └── stats.html           # Library stats page (/stats)
 │
 └── __pycache__/             # Python bytecode cache
 ```
@@ -213,7 +220,7 @@ python rename_and_cache.py --sleep 1.2 # slower rate
 
 ### `thumbs.py` — Pre-build grid thumbnails
 
-Thumbnails are created on demand, but you can build them all up front (e.g. after a bulk import) so the first page load is instant.
+Thumbnails (and their dominant colours) are created on demand, but you can build them all up front (e.g. after a bulk import) so the first page load is instant.
 
 ```bash
 python thumbs.py           # build missing / out-of-date thumbs

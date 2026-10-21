@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#242424" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='icons/icon-192.png') }}" />
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ static_v('style.css') }}">
+  <title>Library Stats · MovieDB</title>
+  <script>
+    // Apply the saved theme before first paint (same key as the library page)
+    try { if (localStorage.getItem('theme') === 'light') document.documentElement.classList.add('light-pending'); } catch (_) {}
+  </script>
+</head>
+<body class="stats-page">
+  <nav class="steam-nav stats-nav">
+    <a class="nav-brand" href="/">
+      <svg class="nav-brand-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+        <line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/>
+        <line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/>
+        <line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/>
+      </svg>
+      <span class="nav-brand-text">MOVIEDB</span>
+    </a>
+    <a class="stats-back" href="/">&#8592; Library</a>
+  </nav>
+
+  <main class="stats-wrap">
+    <header class="stats-head">
+      <h1 class="stats-title">Library stats</h1>
+      <p class="stats-sub">Counts are per poster file — alternate posters of the same film count separately.</p>
+    </header>
+
+    <!-- Figures -->
+    <section class="stats-figures" aria-label="Summary">
+      <div class="stat-hero">
+        <span class="stat-label">Total posters</span>
+        <span class="stat-hero-value">{{ "{:,}".format(s.total) }}</span>
+        <span class="stat-note">{{ "{:,}".format(s.unique) }} unique titles</span>
+      </div>
+      <div class="stat-tiles">
+        <div class="stat-tile">
+          <span class="stat-label">Watched</span>
+          <span class="stat-value">{{ "{:,}".format(s.watched) }}</span>
+          <div class="stat-meter" role="img" aria-label="{{ s.watched_pct }}% of posters watched">
+            <div class="stat-meter-fill" style="width: {{ s.watched_pct }}%"></div>
+          </div>
+          <span class="stat-note">{{ s.watched_pct }}% of the library</span>
+        </div>
+        <div class="stat-tile">
+          <span class="stat-label">Want to watch</span>
+          <span class="stat-value">{{ "{:,}".format(s.want) }}</span>
+        </div>
+        <div class="stat-tile">
+          <span class="stat-label">Average personal rating</span>
+          {% if s.avg_rating is not none %}
+            <span class="stat-value">{{ "%.2f"|format(s.avg_rating) }}<span class="stat-unit"> / 5</span></span>
+            <span class="stat-note">from {{ s.rated }} rated poster{{ "" if s.rated == 1 else "s" }}</span>
+          {% else %}
+            <span class="stat-value stat-empty">—</span>
+            <span class="stat-note">No personal ratings yet</span>
+          {% endif %}
+        </div>
+        <div class="stat-tile">
+          <span class="stat-label">Collections</span>
+          <span class="stat-value">{{ s.n_collections }}</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="stats-charts">
+      <!-- Posters by decade -->
+      <section class="chart-card" aria-labelledby="decade-h">
+        <h2 class="chart-title" id="decade-h">Posters by decade</h2>
+        <p class="chart-sub">Release year from metadata, falling back to the year in the filename</p>
+        <div class="bar-chart">
+          {% for label, n in s.decades %}
+          <div class="bar-row" tabindex="0"
+               data-tip="{{ label }}: {{ n }} poster{{ '' if n == 1 else 's' }} ({{ (100 * n / s.total)|round(1) if s.total else 0 }}%)">
+            <span class="bar-label">{{ label }}</span>
+            <span class="bar-track">
+              <span class="bar-fill{{ ' bar-fill-muted' if label == 'Unknown' else '' }}" style="width: {{ (100 * n / s.decade_max)|round(2) }}%"></span>
+              <span class="bar-value">{{ n }}</span>
+            </span>
+          </div>
+          {% else %}
+          <p class="chart-empty">No posters yet.</p>
+          {% endfor %}
+        </div>
+        <details class="chart-table">
+          <summary>Show as table</summary>
+          <table>
+            <thead><tr><th scope="col">Decade</th><th scope="col">Posters</th></tr></thead>
+            <tbody>{% for label, n in s.decades %}<tr><td>{{ label }}</td><td>{{ n }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </details>
+      </section>
+
+      <!-- Personal rating distribution -->
+      <section class="chart-card" aria-labelledby="rating-h">
+        <h2 class="chart-title" id="rating-h">Personal ratings</h2>
+        <p class="chart-sub">How many posters you've given each star rating</p>
+        {% set star_max = (s.stars.values()|max) or 1 %}
+        <div class="bar-chart">
+          {% for i in [5, 4, 3, 2, 1] %}
+          {% set n = s.stars[i] %}
+          <div class="bar-row" tabindex="0" data-tip="{{ i }} star{{ '' if i == 1 else 's' }}: {{ n }} poster{{ '' if n == 1 else 's' }}">
+            <span class="bar-label bar-label-stars" aria-label="{{ i }} stars">{{ "★" * i }}</span>
+            <span class="bar-track">
+              <span class="bar-fill" style="width: {{ (100 * n / star_max)|round(2) }}%"></span>
+              <span class="bar-value">{{ n }}</span>
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+        <details class="chart-table">
+          <summary>Show as table</summary>
+          <table>
+            <thead><tr><th scope="col">Stars</th><th scope="col">Posters</th></tr></thead>
+            <tbody>{% for i in [5, 4, 3, 2, 1] %}<tr><td>{{ i }}</td><td>{{ s.stars[i] }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </details>
+      </section>
+
+      <!-- Largest collections -->
+      <section class="chart-card chart-card-wide" aria-labelledby="coll-h">
+        <h2 class="chart-title" id="coll-h">Largest collections</h2>
+        <p class="chart-sub">Top {{ s.collections|length }} by number of posters</p>
+        <div class="bar-chart">
+          {% for name, n in s.collections %}
+          <div class="bar-row" tabindex="0" data-tip="{{ name }}: {{ n }} poster{{ '' if n == 1 else 's' }}">
+            <span class="bar-label bar-label-wide" title="{{ name }}">{{ name }}</span>
+            <span class="bar-track">
+              <span class="bar-fill" style="width: {{ (100 * n / s.coll_max)|round(2) }}%"></span>
+              <span class="bar-value">{{ n }}</span>
+            </span>
+          </div>
+          {% else %}
+          <p class="chart-empty">No collections yet — assign one from a poster's lightbox.</p>
+          {% endfor %}
+        </div>
+        {% if s.collections %}
+        <details class="chart-table">
+          <summary>Show as table</summary>
+          <table>
+            <thead><tr><th scope="col">Collection</th><th scope="col">Posters</th></tr></thead>
+            <tbody>{% for name, n in s.collections %}<tr><td>{{ name }}</td><td>{{ n }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </details>
+        {% endif %}
+      </section>
+    </div>
+  </main>
+
+  <div class="chart-tip" id="chart-tip" role="status" hidden></div>
+
+  <script>
+    (function () {
+      if (document.documentElement.classList.contains('light-pending')) document.body.classList.add('light-mode');
+
+      // Hover / focus tooltip for bars
+      const tip = document.getElementById('chart-tip');
+      function show(row, x, y) {
+        tip.textContent = row.dataset.tip;
+        tip.hidden = false;
+        const w = tip.offsetWidth, h = tip.offsetHeight;
+        tip.style.left = Math.min(Math.max(8, x - w / 2), innerWidth - w - 8) + 'px';
+        tip.style.top  = Math.max(8, y - h - 12) + 'px';
+      }
+      document.querySelectorAll('.bar-row').forEach(function (row) {
+        row.addEventListener('pointermove', function (e) { show(row, e.clientX, e.clientY); });
+        row.addEventListener('pointerleave', function () { tip.hidden = true; });
+        row.addEventListener('focus', function () {
+          const r = row.querySelector('.bar-fill').getBoundingClientRect();
+          show(row, r.right, r.top);
+        });
+        row.addEventListener('blur', function () { tip.hidden = true; });
+      });
+
+      if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('/sw.js').catch(function () {});
+    })();
+  </script>
+</body>
+</html>
