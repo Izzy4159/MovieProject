@@ -96,6 +96,15 @@
       Group View
     </button>
 
+    <button class="nav-group-view-btn" id="stack-btn" onclick="toggleStackMode()" aria-pressed="false"
+            title="Collapse alternate posters of the same movie into one card">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="7" width="12" height="14" rx="1"/><path d="M7 3h13a1 1 0 0 1 1 1v13"/>
+      </svg>
+      <span id="stack-btn-label">Stack</span>
+    </button>
+
     <!-- Feature buttons: icon-only in the desktop bar, labelled in the collapsed menu -->
     <div class="nav-feature-group">
       <button class="nav-icon-btn nav-theater-btn" id="theater-btn" onclick="toggleTheater()"
@@ -170,6 +179,7 @@
        MAIN LIBRARY GRID
   ══════════════════════════════════════════════════════ -->
   <section class="library-section" id="library-section">
+    <div id="search-suggest" class="search-suggest" aria-live="polite" hidden></div>
     <div class="grid-container">
       {{ grid_items | safe }}
     </div>
@@ -308,6 +318,7 @@
     </div>
   </div>
 
+  <script>window.STACK_COVERS = {{ stack_covers | tojson }};</script>
   <script src="{{ static_v('script.js') }}" defer></script>
 </body>
 </html>

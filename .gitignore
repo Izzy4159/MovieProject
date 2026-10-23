@@ -1,25 +1,32 @@
-@"
 # Python
 .venv/
+venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 *.egg-info/
 
-# Local env & OS junk
+# Secrets — copy .env.example to .env locally
 .env
 .env.*
+!.env.example
+
+# OS / editor junk
 .DS_Store
+Thumbs.db
 
-# Project artifacts
-omdb_cache.json
-"@ | Out-File -Encoding ASCII .gitignore
+# Personal library state (local-only; the live site starts empty)
+watched.json
+personal_ratings.json
+collections.json
+stack_covers.json
 
-# If .venv already got added once:
-git rm -r --cached .venv
-git add .gitignore
-git commit -m "Ignore .venv and local artifacts"
-
-# Generated grid thumbnails (rebuilt lazily)
+# Generated grid thumbnails + dominant-colour cache (posters/thumbs/colors.json)
 posters/thumbs/
+
+# Logs
+*.log
+backfill_log.txt
+
+# omdb_cache.json is intentionally committed — the live site needs it.

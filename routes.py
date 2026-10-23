@@ -1,7 +1,7 @@
 import os, json, time, re, threading
 from urllib.parse import quote
 from flask import Blueprint, send_from_directory, render_template, request, jsonify, url_for
-from data import get_movie_info, parse_filename, norm_key, cache as data_cache
+from data import get_movie_info, parse_filename, norm_key, is_variant_token, cache as data_cache
 from thumbs import (ensure_thumb, remove_thumb, rename_thumb, THUMBS_DIR,
                     get_color, compute_color, all_colors)
 
@@ -17,6 +17,7 @@ ITEMS_PER_PAGE       = 50
 BACKFILL_PER_REQUEST  = 8
 COLLECTIONS_PATH     = os.path.join(BASE_DIR, "collections.json")
 ZOOM_PATH            = os.path.join(BASE_DIR, "poster_zoom.json")
+STACK_COVERS_PATH    = os.path.join(BASE_DIR, "stack_covers.json")
 
 # Regex: valid year paren — exactly 4 digits starting with 19 or 20
 _YEAR_PAT    = re.compile(r'\(((?:19|20)\d{2})\)')
@@ -103,7 +104,10 @@ def _safe_poster_path(filename: str):
 
 # ── In-memory cache (populated at startup) ────────────────────────────────────
 
-CACHE = _load_cache()
+# Share data.py's dict: two separate copies each rewrote omdb_cache.json in full,
+# so whichever saved last silently dropped the other's backfill results.
+CACHE = data_cache
+CACHE.update(_load_cache())
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -112,13 +116,26 @@ def _get_grid_mtimes():
     t2 = os.path.getmtime(CACHE_PATH)  if os.path.exists(CACHE_PATH)  else 0.0
     return t1, t2
 
+_BACKFILL = {"running": False}
+
 def _run_backfill(misses):
     """Background thread: fetch OMDb data for up to BACKFILL_PER_REQUEST misses."""
+    try:
+        _backfill_batch(misses)
+    finally:
+        _BACKFILL["running"] = False
+
+def _backfill_batch(misses):
     updated = 0
-    for poster_fn, title_guess, year in misses[:BACKFILL_PER_REQUEST]:
+    for poster_fn, title_guess, year, relookup in misses[:BACKFILL_PER_REQUEST]:
         # Pass filename so data.get_movie_info can check poster_ids/manual_overrides first
         info = get_movie_info(title_guess, year=year, filename=poster_fn)
-        if info:
+        if not info and relookup and isinstance(CACHE.get(poster_fn), dict):
+            # Keep the stale upload entry but store the cleaned title and stop retrying
+            CACHE[poster_fn]["title"] = title_guess
+            CACHE[poster_fn]["relookup_done"] = True
+            updated += 1
+        elif info:
             CACHE[poster_fn] = {
                 "title":  info.get("title")  or title_guess,
                 "year":   info.get("year")   or year or "N/A",
@@ -162,8 +179,30 @@ def _lookup_cache(filename: str, title_guess: str, year):
         return info
     return CACHE.get(norm_key(title_guess, year))
 
-# Ignore tokens that data.parse_filename also drops
-_IGNORE_TOKENS = {'ver', 'xlg', 'poster', 'intl', 'cover'}
+# Sources whose cached title was copied from the filename rather than a real lookup
+_FILENAME_SOURCES = ("uploaded", "unknown")
+
+def _clean_title(title: str) -> str:
+    """Strip (2)/(3) counters and variant tokens (ver2, xlg, v2 …) from a title string."""
+    name  = _NONYR_PAREN.sub('', str(title or ''))
+    parts = name.replace('_', ' ').split()
+    return ' '.join(w for w in parts if not is_variant_token(w)).strip()
+
+def _display_title(info, title_guess: str) -> str:
+    """Title to show for a poster. Filename-derived cache titles get variant tags stripped."""
+    if not info:
+        return title_guess
+    title = info.get("title") or title_guess
+    if info.get("source") in _FILENAME_SOURCES:
+        title = _clean_title(title) or title_guess
+    return title
+
+def _needs_relookup(info) -> bool:
+    """Cached from the filename (upload / failed backfill) with no year → worth a real lookup."""
+    return (isinstance(info, dict)
+            and info.get("source") in _FILENAME_SOURCES
+            and str(info.get("year") or "N/A") == "N/A"
+            and not info.get("relookup_done"))
 
 def _parse_poster_filename(base_name: str):
     """
@@ -172,6 +211,8 @@ def _parse_poster_filename(base_name: str):
     Rules vs data.parse_filename:
     - A parenthetical is a YEAR only if it is exactly 4 digits starting with
       19 or 20.  Anything else — (2), (3), (#4), etc. — is stripped entirely.
+    - A bare 4-digit number is never a year: "1917", "1984", "2046 xlg" keep
+      it as the title.  "1917 (2019)" -> ("1917", "2019").
     - Everything AFTER the first valid year parenthetical is DISCARDED so that
       variant tags ("v2", "xlg", "#4") and duplicate year suffixes never bleed
       into the display title.
@@ -185,6 +226,7 @@ def _parse_poster_filename(base_name: str):
     "mortal kombat 2 (2026) xlg (2026)"  -> ("mortal kombat 2", "2026")
     "no country for old men ver4 (2007)" -> ("no country for old men", "2007")
     "Alien (1979)"                       -> ("Alien", "1979")
+    "1917 (3)"                           -> ("1917", None)
     """
     ym   = _YEAR_PAT.search(base_name)
     year = ym.group(1) if ym else None
@@ -197,8 +239,7 @@ def _parse_poster_filename(base_name: str):
 
     # Replicate data.parse_filename cleanup
     parts   = name.replace('_', ' ').replace('-', ' ').split()
-    cleaned = [w for w in parts
-               if not any(w.lower().startswith(ig) for ig in _IGNORE_TOKENS)]
+    cleaned = [w for w in parts if not is_variant_token(w)]
     title   = ' '.join(cleaned).strip()
     return title, year
 
@@ -236,6 +277,23 @@ def _save_zoom_data(data: dict):
     except Exception as e:
         print(f"[ZOOM WRITE ERROR] {e}")
 
+def _load_stack_covers():
+    """{stack key: filename} — chosen cover poster for each stacked movie."""
+    if os.path.exists(STACK_COVERS_PATH):
+        try:
+            with open(STACK_COVERS_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def _save_stack_covers(data: dict):
+    try:
+        with open(STACK_COVERS_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"[STACK COVERS WRITE ERROR] {e}")
+
 # ── Grid generation ───────────────────────────────────────────────────────────
 
 def generate_grid_items():
@@ -260,7 +318,7 @@ def generate_grid_items():
     poster_files.sort(key=str.lower)
 
     grid_items = []
-    misses = []  # (poster_filename, title_guess, year)
+    misses = []  # (poster_filename, title_guess, year, relookup)
     color_misses = []
 
     for i, poster in enumerate(poster_files):
@@ -270,13 +328,15 @@ def generate_grid_items():
 
         info = _lookup_cache(poster, title_guess, year)
         if info:
-            title  = info.get("title")  or title_guess
+            title  = _display_title(info, title_guess)
             yr     = info.get("year")   or year or "N/A"
             rating = info.get("rating") if info.get("rating") not in (None, "N/A") else "N/A"
             plot   = info.get("plot")   or "No plot available"
+            if _needs_relookup(info):
+                misses.append((poster, title_guess, year, True))
         else:
             title, yr, rating, plot = title_guess, year or "N/A", "N/A", "No plot available"
-            misses.append((poster, title_guess, year))
+            misses.append((poster, title_guess, year, False))
 
         watch_status    = watched.get(poster, "")
         personal_rating = int(ratings.get(poster, 0))
@@ -311,7 +371,9 @@ def generate_grid_items():
     _GRID_CACHE.update({'html': html, 'mtime_posters': t1, 'mtime_cache': t2})
 
     # Fire backfill in a daemon thread — does not block the response
-    if misses:
+    # One batch at a time — the next page load after it finishes queues the rest
+    if misses and not _BACKFILL["running"]:
+        _BACKFILL["running"] = True
         threading.Thread(target=_run_backfill, args=(misses,), daemon=True).start()
     if color_misses and not _COLOR_BACKFILL["running"]:
         _COLOR_BACKFILL["running"] = True
@@ -325,7 +387,7 @@ def generate_grid_items():
 @main_bp.route("/")
 def index():
     grid_html = generate_grid_items()
-    return render_template("index.html", grid_items=grid_html)
+    return render_template("index.html", grid_items=grid_html, stack_covers=_load_stack_covers())
 
 @main_bp.route("/posters/<path:filename>")
 def poster(filename):
@@ -439,6 +501,9 @@ def rename_poster():
     if old_filename in colls:
         colls[new_filename] = colls.pop(old_filename)
         _save_collections(colls)
+    covers = _load_stack_covers()
+    if old_filename in covers.values():
+        _save_stack_covers({k: (new_filename if v == old_filename else v) for k, v in covers.items()})
 
     # Migrate poster_ids.json entry (if present) — keep same id/source value
     try:
@@ -561,6 +626,9 @@ def delete_poster():
     if filename in colls:
         colls.pop(filename)
         _save_collections(colls)
+    covers = _load_stack_covers()
+    if filename in covers.values():
+        _save_stack_covers({k: v for k, v in covers.items() if v != filename})
 
     return jsonify(ok=True)
 
@@ -687,6 +755,22 @@ def set_collection():
     return jsonify(ok=True, filename=filename, group=group)
 
 
+@main_bp.route("/set_stack_cover", methods=["POST"])
+def set_stack_cover():
+    """Choose which poster represents a stacked movie. Body: {key, filename}."""
+    body     = request.get_json(silent=True) or {}
+    key      = (body.get("key")      or "").strip()
+    filename = (body.get("filename") or "").strip()
+    path     = _safe_poster_path(filename) if filename else None
+    if not key or len(key) > 300 or not path or not os.path.isfile(path):
+        return jsonify(error="Invalid stack key or filename"), 400
+
+    covers = _load_stack_covers()
+    covers[key] = filename
+    _save_stack_covers(covers)
+    return jsonify(ok=True, key=key, filename=filename)
+
+
 @main_bp.route("/collection_groups")
 def collection_groups():
     """Return sorted list of all known group names (from collections + omdb cache titles)."""
@@ -716,7 +800,7 @@ def _compute_stats():
     for fn in posters:
         title_guess, year = _parse_poster_filename(os.path.splitext(fn)[0])
         info  = _lookup_cache(fn, title_guess, year) or {}
-        title = (info.get("title") or title_guess or "").strip().lower()
+        title = (_display_title(info, title_guess) or "").strip().lower()
         m     = re.search(r"(1[89]\d\d|20\d\d)", str(info.get("year") or year or ""))
         yr    = int(m.group(1)) if m else None
         unique.add((title, yr))
@@ -783,7 +867,7 @@ def recently_added():
                     mtime = 0.0
                 title_guess, year = _parse_poster_filename(os.path.splitext(e.name)[0])
                 info  = _lookup_cache(e.name, title_guess, year)
-                title = (info or {}).get("title") or title_guess
+                title = _display_title(info, title_guess)
                 yr    = (info or {}).get("year")  or year or "N/A"
                 entries.append({
                     "filename": e.name,

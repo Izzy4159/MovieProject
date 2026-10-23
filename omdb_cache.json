@@ -2346,9 +2346,9 @@
   },
   "michael": {
     "title": "Michael",
-    "year": "1996",
-    "rating": "5.7",
-    "plot": "Two tabloid reporters checking out a report of the Archangel Michael living with an old woman find that it's true. But that's not the only surprise.",
+    "year": "2026",
+    "rating": "7.4",
+    "plot": "The early life of musician Michael Jackson, from the discovery of his talent as the lead of the Jackson Five to the artist whose creative ambition fueled a pursuit to become the biggest entertainer in the world.",
     "source": "omdb"
   },
   "mickey oneseven": {
@@ -4426,7 +4426,7 @@
   "2 fast 2 furious": {
     "title": "2 Fast 2 Furious",
     "year": "2003",
-    "rating": "5.9",
+    "rating": "6.0",
     "plot": "Former cop Brian O'Conner is called upon to bust a dangerous criminal and he recruits the help of a former childhood friend and street racer who has a chance to redeem himself.",
     "source": "omdb"
   },
@@ -4494,11 +4494,11 @@
     "source": "omdb"
   },
   "2 Fast 2 Furious (2).webp": {
-    "title": "2 Fast 2 Furious (2)",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "unknown"
+    "title": "2 Fast 2 Furious",
+    "year": "2003",
+    "rating": "6.0",
+    "plot": "Former cop Brian O'Conner is called upon to bust a dangerous criminal and he recruits the help of a former childhood friend and street racer who has a chance to redeem himself.",
+    "source": "omdb"
   },
   "wolf of wall street ver2 xlg (2013).webp": {
     "title": "wolf of wall street ver2 xlg",
@@ -4529,18 +4529,18 @@
     "source": "uploaded"
   },
   "bohemian rhapsody ver2.webp": {
-    "title": "bohemian rhapsody ver2",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Bohemian Rhapsody",
+    "year": "2018",
+    "rating": "7.9",
+    "plot": "With his impeccable vocal abilities, Freddie Mercury and his rock band, Queen, achieve superstardom. However, amidst his skyrocketing success, he grapples with his ego, sexuality and a fatal illness.",
+    "source": "omdb"
   },
   "alita battle angel xlg.webp": {
-    "title": "alita battle angel xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Alita: Battle Angel",
+    "year": "2019",
+    "rating": "7.3",
+    "plot": "A deactivated cyborg's revived, but can't remember anything of her past and goes on a quest to find out who she is.",
+    "source": "omdb"
   },
   "mortal kombat two ver24 xlg (2026).webp": {
     "title": "mortal kombat two ver24 xlg",
@@ -4550,46 +4550,46 @@
     "source": "uploaded"
   },
   "django unchained ver2 xlg.webp": {
-    "title": "django unchained ver2 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Django Unchained",
+    "year": "2012",
+    "rating": "8.5",
+    "plot": "With the help of a German bounty-hunter, a freed slave sets out to rescue his wife from a brutal plantation owner in Mississippi.",
+    "source": "omdb"
   },
   "fight club ver9 xlg.webp": {
-    "title": "fight club ver9 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Fight Club",
+    "year": "1999",
+    "rating": "8.8",
+    "plot": "An insomniac office worker and a devil-may-care soap maker form an underground fight club that evolves into much more.",
+    "source": "omdb"
   },
   "hunger games sunrise on the reaping ver2 xlg.webp": {
-    "title": "hunger games sunrise on the reaping ver2 xlg",
-    "year": "N/A",
+    "title": "The Hunger Games: Sunrise on the Reaping",
+    "year": "2026",
     "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "plot": "Explores Panem 24 years before Katniss' saga, starting on the morning of the reaping for the 50th Hunger Games, where a young Haymitch Abernathy participates.",
+    "source": "omdb"
   },
   "django unchained ver9.webp": {
-    "title": "django unchained ver9",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Django Unchained",
+    "year": "2012",
+    "rating": "8.5",
+    "plot": "With the help of a German bounty-hunter, a freed slave sets out to rescue his wife from a brutal plantation owner in Mississippi.",
+    "source": "omdb"
   },
   "dallas buyers club xlg.webp": {
-    "title": "dallas buyers club xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Dallas Buyers Club",
+    "year": "2013",
+    "rating": "7.9",
+    "plot": "In 1985 Dallas, electrician and hustler Ron Woodroof works around the system to help AIDS patients get the medication they need after he is diagnosed with the disease.",
+    "source": "omdb"
   },
   "perks of being a wallflower xlg.webp": {
-    "title": "perks of being a wallflower xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "The Perks of Being a Wallflower",
+    "year": "2012",
+    "rating": "7.9",
+    "plot": "A pair of charismatic seniors take socially awkward Charlie under their wing.",
+    "source": "omdb"
   },
   "10 cloverfield lane.webp": {
     "title": "10 cloverfield lane",
@@ -4599,11 +4599,11 @@
     "source": "none"
   },
   "10 cloverfield lane v2.webp": {
-    "title": "10 cloverfield lane v2",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "unknown"
+    "title": "10 Cloverfield Lane",
+    "year": "2016",
+    "rating": "7.2",
+    "plot": "A young woman is held in an underground bunker by a man who insists that a hostile event has left the surface of the Earth uninhabitable.",
+    "source": "omdb"
   },
   "TMNT (2014).webp": {
     "title": "TMNT",
@@ -4669,18 +4669,18 @@
     "source": "omdb"
   },
   "pitt xlg.webp": {
-    "title": "pitt xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "The Pitt",
+    "year": "2025–",
+    "rating": "8.9",
+    "plot": "The daily lives of healthcare professionals in a Pittsburgh hospital as they juggle personal crises, workplace politics, and the emotional toll of treating critically ill patients, revealing the resilience required in their noble ...",
+    "source": "omdb"
   },
   "iron man two ver8 xlg.webp": {
-    "title": "iron man two ver8 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Iron Man",
+    "year": 2010,
+    "rating": 6.04,
+    "plot": "Tony Stark, CEO of a large weapons manufacturer, physicist, engineer, and brilliant inventor, is wounded by shrapnel from one of his own weapons. While held captive by terrorists, he develops the Iron Man Suit  and escapes. From that day on, he vows not to waste his second chance at life and to change the world for the better. For that purpose, he comes to Japan.\n\nIn Lab 23 in Japan, great strides have been taken to develop, and build, a unique power station which does not run on fossil fuels, the Arc Station. Stark intends to join this project, and, for that, he is ready to announce his retirement as Iron Man. At the same time, he will also announce the Mass-produced Iron Men, to which he will pass on his duties. However, during the ceremonies, Stark is suddenly attacked by combat mecha belonging to an organization known as Zodiac.",
+    "source": "jikan"
   },
   "two thousand and one a space odyssey ver8 xlg.webp": {
     "title": "two thousand and one a space odyssey ver8 xlg",
@@ -4711,46 +4711,46 @@
     "source": "uploaded"
   },
   "captain america the winter soldier ver13 xlg.webp": {
-    "title": "captain america the winter soldier ver13 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Captain America: The Winter Soldier",
+    "year": "2014",
+    "rating": "7.7",
+    "plot": "As Steve Rogers struggles to embrace his role in the modern world, he teams up with a fellow Avenger and S.H.I.E.L.D agent, Black Widow, to battle a new threat from history: an assassin known as the Winter Soldier.",
+    "source": "omdb"
   },
   "captain america the winter soldier ver3 xlg.webp": {
-    "title": "captain america the winter soldier ver3 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Captain America: The Winter Soldier",
+    "year": "2014",
+    "rating": "7.7",
+    "plot": "As Steve Rogers struggles to embrace his role in the modern world, he teams up with a fellow Avenger and S.H.I.E.L.D agent, Black Widow, to battle a new threat from history: an assassin known as the Winter Soldier.",
+    "source": "omdb"
   },
   "captain america the winter soldier ver5 xlg.webp": {
-    "title": "captain america the winter soldier ver5 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Captain America: The Winter Soldier",
+    "year": "2014",
+    "rating": "7.7",
+    "plot": "As Steve Rogers struggles to embrace his role in the modern world, he teams up with a fellow Avenger and S.H.I.E.L.D agent, Black Widow, to battle a new threat from history: an assassin known as the Winter Soldier.",
+    "source": "omdb"
   },
   "1917.webp": {
     "title": "1917",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "year": "2020",
+    "rating": "8.2",
+    "plot": "April 6th, 1917. As an infantry battalion assembles to wage war deep in enemy territory, two soldiers are assigned to race against time and deliver a message that will stop 1,600 men from walking straight into a deadly trap.",
+    "source": "omdb"
   },
   "1917 (2).webp": {
-    "title": "1917 (2)",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "1917",
+    "year": "2020",
+    "rating": "8.2",
+    "plot": "April 6th, 1917. As an infantry battalion assembles to wage war deep in enemy territory, two soldiers are assigned to race against time and deliver a message that will stop 1,600 men from walking straight into a deadly trap.",
+    "source": "omdb"
   },
   "1917 (3).webp": {
-    "title": "1917 (3)",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "1917",
+    "year": "2020",
+    "rating": "8.2",
+    "plot": "April 6th, 1917. As an infantry battalion assembles to wage war deep in enemy territory, two soldiers are assigned to race against time and deliver a message that will stop 1,600 men from walking straight into a deadly trap.",
+    "source": "omdb"
   },
   "District 9 (2022).webp": {
     "title": "District 9",
@@ -4781,32 +4781,32 @@
     "source": "uploaded"
   },
   "pulp fiction ver2 xlg.webp": {
-    "title": "pulp fiction ver2 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Pulp Fiction",
+    "year": "1994",
+    "rating": "8.8",
+    "plot": "The lives of two mob hitmen, a boxer, a gangster and his wife, and a pair of diner bandits intertwine in four tales of violence and redemption.",
+    "source": "omdb"
   },
   "captain america civil war ver42 xlg.webp": {
-    "title": "captain america civil war ver42 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Captain America: Civil War",
+    "year": "2016",
+    "rating": "7.8",
+    "plot": "Political involvement in the Avengers' affairs causes a rift between Captain America and Iron Man.",
+    "source": "omdb"
   },
   "captain america civil war ver3 xlg.webp": {
-    "title": "captain america civil war ver3 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Captain America: Civil War",
+    "year": "2016",
+    "rating": "7.8",
+    "plot": "Political involvement in the Avengers' affairs causes a rift between Captain America and Iron Man.",
+    "source": "omdb"
   },
   "hokum ver2 xlg.webp": {
-    "title": "hokum ver2 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Hokum",
+    "year": "2026",
+    "rating": "6.6",
+    "plot": "A horror writer visits an Irish inn to scatter his parents' ashes, unaware the property is said to be haunted by a witch.",
+    "source": "omdb"
   },
   "thor ragnarok ver9 xlg.webp": {
     "title": "thor ragnarok ver9 xlg",
@@ -4827,28 +4827,29 @@
     "year": "N/A",
     "rating": "N/A",
     "plot": "No plot available",
-    "source": "uploaded"
+    "source": "uploaded",
+    "relookup_done": true
   },
   "Legend of Korra v2.webp": {
-    "title": "Legend of Korra v2",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "The Legend of Korra",
+    "year": "2012–2014",
+    "rating": "8.3",
+    "plot": "Avatar Korra fights to keep Republic City safe from the evil forces of both the physical and spiritual worlds.",
+    "source": "omdb"
   },
   "hurt locker ver8 xlg.webp": {
-    "title": "hurt locker ver8 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "The Hurt Locker",
+    "year": "2009",
+    "rating": "7.5",
+    "plot": "During the Iraq War, a Sergeant recently assigned to an army bomb squad is put at odds with his squad mates due to his maverick way of handling his work.",
+    "source": "omdb"
   },
   "hurt locker ver3.webp": {
-    "title": "hurt locker ver3",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "The Hurt Locker",
+    "year": "2009",
+    "rating": "7.5",
+    "plot": "During the Iraq War, a Sergeant recently assigned to an army bomb squad is put at odds with his squad mates due to his maverick way of handling his work.",
+    "source": "omdb"
   },
   "Sword Art Online II (2014–2015).webp": {
     "title": "Sword Art Online II",
@@ -4893,39 +4894,39 @@
     "source": "uploaded"
   },
   "euphoria xlg.webp": {
-    "title": "euphoria xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Euphoria",
+    "year": "2019–2026",
+    "rating": "8.1",
+    "plot": "A dark coming-of-age drama exploring love, addiction, friendship and identity in a world full of temptation and uncertainty.",
+    "source": "omdb"
   },
   "michael ver3 xlg.webp": {
-    "title": "michael ver3 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Michael",
+    "year": "2026",
+    "rating": "7.4",
+    "plot": "The early life of musician Michael Jackson, from the discovery of his talent as the lead of the Jackson Five to the artist whose creative ambition fueled a pursuit to become the biggest entertainer in the world.",
+    "source": "omdb"
   },
   "michael ver14 xlg.webp": {
-    "title": "michael ver14 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Michael",
+    "year": "2026",
+    "rating": "7.4",
+    "plot": "The early life of musician Michael Jackson, from the discovery of his talent as the lead of the Jackson Five to the artist whose creative ambition fueled a pursuit to become the biggest entertainer in the world.",
+    "source": "omdb"
   },
   "euphoria ver5 xlg.webp": {
-    "title": "euphoria ver5 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Euphoria",
+    "year": "2019–2026",
+    "rating": "8.1",
+    "plot": "A dark coming-of-age drama exploring love, addiction, friendship and identity in a world full of temptation and uncertainty.",
+    "source": "omdb"
   },
   "boys ver66 xlg.webp": {
-    "title": "boys ver66 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Boys",
+    "year": "2014",
+    "rating": "7.4",
+    "plot": "A sexually awakening gay teen athlete finds himself in a budding relationship with his mutually attracted relay race teammate.",
+    "source": "omdb"
   },
   "straight outta compton ver8 xlg.webp": {
     "title": "straight outta compton ver8 xlg",
@@ -4935,18 +4936,18 @@
     "source": "uploaded"
   },
   "boys ver56.webp": {
-    "title": "boys ver56",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "Boys",
+    "year": "2014",
+    "rating": "7.4",
+    "plot": "A sexually awakening gay teen athlete finds himself in a budding relationship with his mutually attracted relay race teammate.",
+    "source": "omdb"
   },
   "odyssey ver3 xlg.webp": {
-    "title": "odyssey ver3 xlg",
-    "year": "N/A",
-    "rating": "N/A",
-    "plot": "No plot available",
-    "source": "uploaded"
+    "title": "2001: A Space Odyssey",
+    "year": "1968",
+    "rating": "8.3",
+    "plot": "When a mysterious artifact is uncovered on the Moon, a spacecraft manned by two scientists and one supercomputer is dispatched to Jupiter to find its origins.",
+    "source": "omdb"
   },
   "star wars maul shadow lord ver2 xlg.webp": {
     "title": "star wars maul shadow lord ver2 xlg",
@@ -4954,5 +4955,334 @@
     "rating": "N/A",
     "plot": "No plot available",
     "source": "uploaded"
+  },
+  "zero ad": {
+    "title": "Zero A.D.",
+    "year": "2026",
+    "rating": "N/A",
+    "plot": "A terrified king hunts a child of prophecy, and one woman must fight for the soul of mankind.",
+    "source": "omdb"
+  },
+  "bugonia_ver2_xlg.webp": {
+    "title": "Bugonia",
+    "year": "2025",
+    "rating": "7.4",
+    "plot": "Two conspiracy-obsessed young men kidnap the high-powered CEO of a major company, convinced that she is an alien intent on destroying planet Earth.",
+    "source": "omdb"
+  },
+  "bugonia_ver3_xlg.webp": {
+    "title": "Bugonia",
+    "year": "2025",
+    "rating": "7.4",
+    "plot": "Two conspiracy-obsessed young men kidnap the high-powered CEO of a major company, convinced that she is an alien intent on destroying planet Earth.",
+    "source": "omdb"
+  },
+  "bugonia_xlg.webp": {
+    "title": "Bugonia",
+    "year": "2025",
+    "rating": "7.4",
+    "plot": "Two conspiracy-obsessed young men kidnap the high-powered CEO of a major company, convinced that she is an alien intent on destroying planet Earth.",
+    "source": "omdb"
+  },
+  "clayface_xlg.webp": {
+    "title": "Clayface",
+    "year": "2017",
+    "rating": "N/A",
+    "plot": "A silent stage actor slowly realises how empty and lonely his life choices are.",
+    "source": "omdb"
+  },
+  "end_of_oak_street_ver8_xlg.webp": {
+    "title": "The End of Oak Street",
+    "year": "2026",
+    "rating": "N/A",
+    "plot": "The Platt family bands together to navigate their new surroundings after a cosmic event transports their suburban neighborhood to someplace unknown.",
+    "source": "omdb"
+  },
+  "end_of_oak_street_xlg.webp": {
+    "title": "The End of Oak Street",
+    "year": "2026",
+    "rating": "N/A",
+    "plot": "The Platt family bands together to navigate their new surroundings after a cosmic event transports their suburban neighborhood to someplace unknown.",
+    "source": "omdb"
+  },
+  "killers_of_the_flower_moon_ver2_xlg.webp": {
+    "title": "Killers of the Flower Moon",
+    "year": "2023",
+    "rating": "7.5",
+    "plot": "When oil is discovered in 1920s Oklahoma under Osage Nation land, the Osage people are murdered one by one - until the FBI steps in to unravel the mystery.",
+    "source": "omdb"
+  },
+  "killers_of_the_flower_moon_xlg.webp": {
+    "title": "Killers of the Flower Moon",
+    "year": "2023",
+    "rating": "7.5",
+    "plot": "When oil is discovered in 1920s Oklahoma under Osage Nation land, the Osage people are murdered one by one - until the FBI steps in to unravel the mystery.",
+    "source": "omdb"
+  },
+  "obsession_ver2_xlg.webp": {
+    "title": "Obsession",
+    "year": "2026",
+    "rating": "7.9",
+    "plot": "Baron \"Bear\" Bailey breaks a novelty charm to force his co-worker Nikki Freeman to love him, but the supernatural compulsion warps her mind into violent obsession, trapping him in a nightmare he cannot wish away.",
+    "source": "omdb"
+  },
+  "obsession_ver6_xlg.webp": {
+    "title": "Obsession",
+    "year": "2026",
+    "rating": "7.9",
+    "plot": "Baron \"Bear\" Bailey breaks a novelty charm to force his co-worker Nikki Freeman to love him, but the supernatural compulsion warps her mind into violent obsession, trapping him in a nightmare he cannot wish away.",
+    "source": "omdb"
+  },
+  "obsession_ver7_xlg.webp": {
+    "title": "Obsession",
+    "year": "2026",
+    "rating": "7.9",
+    "plot": "Baron \"Bear\" Bailey breaks a novelty charm to force his co-worker Nikki Freeman to love him, but the supernatural compulsion warps her mind into violent obsession, trapping him in a nightmare he cannot wish away.",
+    "source": "omdb"
+  },
+  "send_help_ver2_xlg.webp": {
+    "title": "Send Help",
+    "year": "2026",
+    "rating": "6.9",
+    "plot": "When an employee and her insufferable boss become stranded on a deserted island, the only survivors of a plane crash, they must overcome past grievances and work together to make it out alive.",
+    "source": "omdb"
+  },
+  "send_help_ver3_xlg.webp": {
+    "title": "Send Help",
+    "year": "2026",
+    "rating": "6.9",
+    "plot": "When an employee and her insufferable boss become stranded on a deserted island, the only survivors of a plane crash, they must overcome past grievances and work together to make it out alive.",
+    "source": "omdb"
+  },
+  "ebenezer xlg.webp": {
+    "title": "Ebenezer",
+    "year": "1998",
+    "rating": "5.6",
+    "plot": "A Wild West retelling of Dickens' 'A Christmas Carol,\" with Scrooge as a land baron, gunfighter, and card cheat who is visited by three spirits who attempt to teach him the true meaning of Christmas.",
+    "source": "omdb"
+  },
+  "resident evil xlg.webp": {
+    "title": "resident evil xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "resident evil ver2 xlg.webp": {
+    "title": "Resident Evil",
+    "year": "2002",
+    "rating": "6.6",
+    "plot": "A special military unit fights a powerful, out-of-control supercomputer and hundreds of scientists who have mutated into flesh-eating creatures after a laboratory accident.",
+    "source": "omdb"
+  },
+  "wildwood ver2 xlg.webp": {
+    "title": "wildwood ver2 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "resident evil ver3 xlg.webp": {
+    "title": "resident evil ver3 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "avengers doomsday ver4 xlg.webp": {
+    "title": "Avengers: Doomsday",
+    "year": "2026",
+    "rating": "N/A",
+    "plot": "Heroes from three different worlds must unite when they're thrust together to confront a catastrophic danger that could destroy everything they know.",
+    "source": "omdb"
+  },
+  "whalefall ver2 xlg.webp": {
+    "title": "whalefall ver2 xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "wildwood xlg.webp": {
+    "title": "wildwood xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "werwulf xlg.webp": {
+    "title": "werwulf xlg",
+    "year": "N/A",
+    "rating": "N/A",
+    "plot": "No plot available",
+    "source": "uploaded"
+  },
+  "crawlers xlg.webp": {
+    "title": "Crawlers",
+    "year": "2025",
+    "rating": "4.3",
+    "plot": "In the year 2030, a Zombie Pandemic of Biblical proportions decimates the United States' population. American survivors rush to Mexico to 'El Santuario del Sur', the southern sanctuary, a rocky plateau believed to be zombie free.",
+    "source": "omdb"
+  },
+  "avengers doomsday ver2 xlg.webp": {
+    "title": "Avengers: Doomsday",
+    "year": "2026",
+    "rating": "N/A",
+    "plot": "Heroes from three different worlds must unite when they're thrust together to confront a catastrophic danger that could destroy everything they know.",
+    "source": "omdb"
+  },
+  "avengers doomsday ver3 xlg.webp": {
+    "title": "Avengers: Doomsday",
+    "year": "2026",
+    "rating": "N/A",
+    "plot": "Heroes from three different worlds must unite when they're thrust together to confront a catastrophic danger that could destroy everything they know.",
+    "source": "omdb"
+  },
+  "10 cloverfield lane": {
+    "title": "10 Cloverfield Lane",
+    "year": "2016",
+    "rating": "7.2",
+    "plot": "A young woman is held in an underground bunker by a man who insists that a hostile event has left the surface of the Earth uninhabitable.",
+    "source": "omdb"
+  },
+  "1917": {
+    "title": "1917",
+    "year": "2020",
+    "rating": "8.2",
+    "plot": "April 6th, 1917. As an infantry battalion assembles to wage war deep in enemy territory, two soldiers are assigned to race against time and deliver a message that will stop 1,600 men from walking straight into a deadly trap.",
+    "source": "omdb"
+  },
+  "alita battle angel": {
+    "title": "Alita: Battle Angel",
+    "year": "2019",
+    "rating": "7.3",
+    "plot": "A deactivated cyborg's revived, but can't remember anything of her past and goes on a quest to find out who she is.",
+    "source": "omdb"
+  },
+  "avengers doomsday": {
+    "title": "Avengers: Doomsday",
+    "year": "2026",
+    "rating": "N/A",
+    "plot": "Heroes from three different worlds must unite when they're thrust together to confront a catastrophic danger that could destroy everything they know.",
+    "source": "omdb"
+  },
+  "bohemian rhapsody": {
+    "title": "Bohemian Rhapsody",
+    "year": "2018",
+    "rating": "7.9",
+    "plot": "With his impeccable vocal abilities, Freddie Mercury and his rock band, Queen, achieve superstardom. However, amidst his skyrocketing success, he grapples with his ego, sexuality and a fatal illness.",
+    "source": "omdb"
+  },
+  "captain america civil war": {
+    "title": "Captain America: Civil War",
+    "year": "2016",
+    "rating": "7.8",
+    "plot": "Political involvement in the Avengers' affairs causes a rift between Captain America and Iron Man.",
+    "source": "omdb"
+  },
+  "crawlers": {
+    "title": "Crawlers",
+    "year": "2025",
+    "rating": "4.3",
+    "plot": "In the year 2030, a Zombie Pandemic of Biblical proportions decimates the United States' population. American survivors rush to Mexico to 'El Santuario del Sur', the southern sanctuary, a rocky plateau believed to be zombie free.",
+    "source": "omdb"
+  },
+  "dallas buyers club": {
+    "title": "Dallas Buyers Club",
+    "year": "2013",
+    "rating": "7.9",
+    "plot": "In 1985 Dallas, electrician and hustler Ron Woodroof works around the system to help AIDS patients get the medication they need after he is diagnosed with the disease.",
+    "source": "omdb"
+  },
+  "django unchained": {
+    "title": "Django Unchained",
+    "year": "2012",
+    "rating": "8.5",
+    "plot": "With the help of a German bounty-hunter, a freed slave sets out to rescue his wife from a brutal plantation owner in Mississippi.",
+    "source": "omdb"
+  },
+  "ebenezer": {
+    "title": "Ebenezer",
+    "year": "1998",
+    "rating": "5.6",
+    "plot": "A Wild West retelling of Dickens' 'A Christmas Carol,\" with Scrooge as a land baron, gunfighter, and card cheat who is visited by three spirits who attempt to teach him the true meaning of Christmas.",
+    "source": "omdb"
+  },
+  "euphoria": {
+    "title": "Euphoria",
+    "year": "2019–2026",
+    "rating": "8.1",
+    "plot": "A dark coming-of-age drama exploring love, addiction, friendship and identity in a world full of temptation and uncertainty.",
+    "source": "omdb"
+  },
+  "fight club": {
+    "title": "Fight Club",
+    "year": "1999",
+    "rating": "8.8",
+    "plot": "An insomniac office worker and a devil-may-care soap maker form an underground fight club that evolves into much more.",
+    "source": "omdb"
+  },
+  "hokum": {
+    "title": "Hokum",
+    "year": "2026",
+    "rating": "6.6",
+    "plot": "A horror writer visits an Irish inn to scatter his parents' ashes, unaware the property is said to be haunted by a witch.",
+    "source": "omdb"
+  },
+  "hunger games sunrise on the reaping": {
+    "title": "The Hunger Games: Sunrise on the Reaping",
+    "year": "2026",
+    "rating": "N/A",
+    "plot": "Explores Panem 24 years before Katniss' saga, starting on the morning of the reaping for the 50th Hunger Games, where a young Haymitch Abernathy participates.",
+    "source": "omdb"
+  },
+  "hurt locker": {
+    "title": "The Hurt Locker",
+    "year": "2009",
+    "rating": "7.5",
+    "plot": "During the Iraq War, a Sergeant recently assigned to an army bomb squad is put at odds with his squad mates due to his maverick way of handling his work.",
+    "source": "omdb"
+  },
+  "legend of korra": {
+    "title": "The Legend of Korra",
+    "year": "2012–2014",
+    "rating": "8.3",
+    "plot": "Avatar Korra fights to keep Republic City safe from the evil forces of both the physical and spiritual worlds.",
+    "source": "omdb"
+  },
+  "odyssey": {
+    "title": "2001: A Space Odyssey",
+    "year": "1968",
+    "rating": "8.3",
+    "plot": "When a mysterious artifact is uncovered on the Moon, a spacecraft manned by two scientists and one supercomputer is dispatched to Jupiter to find its origins.",
+    "source": "omdb"
+  },
+  "perks of being a wallflower": {
+    "title": "The Perks of Being a Wallflower",
+    "year": "2012",
+    "rating": "7.9",
+    "plot": "A pair of charismatic seniors take socially awkward Charlie under their wing.",
+    "source": "omdb"
+  },
+  "pitt": {
+    "title": "The Pitt",
+    "year": "2025–",
+    "rating": "8.9",
+    "plot": "The daily lives of healthcare professionals in a Pittsburgh hospital as they juggle personal crises, workplace politics, and the emotional toll of treating critically ill patients, revealing the resilience required in their noble ...",
+    "source": "omdb"
+  },
+  "pulp fiction": {
+    "title": "Pulp Fiction",
+    "year": "1994",
+    "rating": "8.8",
+    "plot": "The lives of two mob hitmen, a boxer, a gangster and his wife, and a pair of diner bandits intertwine in four tales of violence and redemption.",
+    "source": "omdb"
+  },
+  "resident evil": {
+    "title": "Resident Evil",
+    "year": "2002",
+    "rating": "6.6",
+    "plot": "A special military unit fights a powerful, out-of-control supercomputer and hundreds of scientists who have mutated into flesh-eating creatures after a laboratory accident.",
+    "source": "omdb"
   }
 }

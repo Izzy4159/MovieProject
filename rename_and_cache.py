@@ -32,7 +32,13 @@ from pathlib import Path
 # ------------------------------------------------------------------ #
 POSTERS_DIR = Path("posters")
 CACHE_FILE  = Path("omdb_cache.json")
-OMDB_API_KEY = "ab30acaf"
+# OMDb key comes from the environment (or a local, git-ignored .env file)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent / ".env")
+except ImportError:
+    pass
+OMDB_API_KEY = os.environ.get("OMDB_API_KEY", "").strip()
 
 IGNORE_WORDS = {"ver", "xlg", "poster", "final", "intl", "cover"}
 _YEAR_RE     = re.compile(r'\((\d{4})\)')

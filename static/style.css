@@ -348,6 +348,28 @@ body.light-mode .icon-sun  { display: block; }
   justify-content: start;
 }
 
+/* "Did you mean: …?" line above the grid (search) */
+.search-suggest {
+  margin: 2px 2px 10px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.search-suggest[hidden] { display: none; }
+.search-suggest-link {
+  font: inherit;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--border-hi);
+  cursor: pointer;
+}
+.search-suggest-link:hover,
+.search-suggest-link:focus-visible { text-decoration-color: currentColor; }
+
 /* Individual poster card — fixed width, never larger than --card-width */
 .grid-item {
   position: relative;
@@ -1076,24 +1098,32 @@ body.light-mode .icon-sun  { display: block; }
 }
 #lightbox.show { display: flex; }
 
-/* Dialog: image left, sidebar right */
+/* Dialog: image left, sidebar right.
+   Shrink-wraps its two columns (no fixed width): a fixed 92vw width used to
+   leave an empty, bordered, transparent strip right of the sidebar whenever
+   poster + sidebar were narrower than the dialog. */
 .lb-dialog {
-  display: flex;
-  width: 92vw;
-  max-width: 1480px;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 95vw;
   height: 88vh;
+  max-height: 92vh;
   border-radius: 6px;
   overflow: hidden;
+  background: #242424;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Left column: wrapper holds blurred bg + sharp poster.
-   Width is adjusted by JS after each image loads to match the poster's aspect ratio. */
+   Sized by height × aspect-ratio (2:3 until JS sets the poster's real ratio);
+   capped so the sidebar always fits inside 95vw. */
 .lb-image-wrap {
-  flex: 0 0 55%;          /* default before image loads; JS overrides inline */
-  min-width: 38%;
-  max-width: 68%;
+  flex: 0 0 auto;
+  height: 100%;
+  aspect-ratio: 2 / 3;
+  min-width: 0;
+  max-width: calc(95vw - 420px - 2px);
   position: relative;
   overflow: hidden;
   background-color: #111;
@@ -1849,6 +1879,7 @@ body.light-mode .search-input::placeholder { color: rgba(255,255,255,0.3); }
 body.light-mode .recent-dropdown { background: #d0d0d0; }
 body.light-mode .recent-card { background: var(--bg-card); }
 body.light-mode .grid-item { background: var(--bg-card); }
+body.light-mode .lb-dialog  { background: #d8d8d8; }
 body.light-mode .lb-sidebar { background: #d8d8d8; border-left-color: rgba(0,0,0,0.1); }
 body.light-mode .lb-save-bar { background: #d8d8d8; border-top-color: rgba(0,0,0,0.1); }
 body.light-mode #lightboxImage { background: #b8b8b8; }
@@ -1874,6 +1905,7 @@ body.light-mode .card-title-input { background: rgba(0,0,0,0.6); }
 /* Lightbox: narrow sidebar on smaller screens */
 @media (max-width: 900px) {
   .lb-sidebar { flex: 0 0 320px; width: 320px; }
+  .lb-image-wrap { max-width: calc(95vw - 320px - 2px); }
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2504,10 +2536,13 @@ body.light-mode .stats-back { color: rgba(255,255,255,0.75); border-color: rgba(
    collapse everything except brand + search into a menu panel.
 ══════════════════════════════════════════════════════════════════ */
 @media (max-width: 1599px) {
-  .nav-links, .nav-count { display: none; }
+  .nav-links { display: none; }
+}
+@media (max-width: 1679px) {
+  .nav-count { display: none; }   /* room for the Stack / Show All toggle */
 }
 
-@media (max-width: 1350px) {
+@media (max-width: 1450px) {
   /* Nav bar: brand · search · menu button */
   .steam-nav { gap: 10px; }
   .nav-search { order: 0; max-width: 520px; min-width: 0; margin-left: auto; }
@@ -2609,6 +2644,7 @@ body.light-mode .stats-back { color: rgba(255,255,255,0.75); border-color: rgba(
     flex-direction: column;
     width: 100%;
     max-width: none;
+    max-height: none;
     height: 92vh;
     height: 92dvh;
     border-radius: 16px 16px 0 0;
@@ -2632,7 +2668,11 @@ body.light-mode .stats-back { color: rgba(255,255,255,0.75); border-color: rgba(
     border-radius: 3px;
     background: rgba(255, 255, 255, 0.45);
   }
-  .lb-image-wrap { flex: 0 0 42vh; flex-basis: 42dvh; min-width: 0; max-width: none; width: 100%; }
+  .lb-image-wrap {
+    flex: 0 0 42vh; flex-basis: 42dvh;
+    height: auto; width: 100%; min-width: 0; max-width: none;
+    aspect-ratio: auto !important;   /* override the inline ratio set on desktop */
+  }
   .lb-sidebar { flex: 1 1 auto; width: 100%; padding: 64px 16px 0; border-left: none; }
   .lb-save-bar { padding-bottom: calc(16px + var(--safe-bottom)); }
   .lb-watch-row { flex-wrap: wrap; }
@@ -2651,6 +2691,147 @@ body.light-mode .stats-back { color: rgba(255,255,255,0.75); border-color: rgba(
   .th-card.th-focus { transform: scale(1.06); }
   .th-hints, .th-exit-label { display: none; }
   .steam-toast { left: 12px; right: 12px; bottom: calc(16px + var(--safe-bottom)); max-width: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   STACK DUPLICATES — one card per movie, ×N badge, inline expand
+══════════════════════════════════════════════════════════════════ */
+.grid-item.stack-hidden { display: none !important; }
+
+/* Offset "cards behind" pile. Box-shadows sit outside the box, so the card's
+   overflow:hidden doesn't clip them. */
+.grid-item.stack-cover {
+  box-shadow: 4px -4px 0 -1px var(--bg-card), 4px -4px 0 0 var(--border-hi),
+              8px -8px 0 -2px var(--bg-card), 8px -8px 0 -1px var(--border);
+}
+.grid-item.stack-cover.stack-expanded { border-color: #f5c842; }
+/* The pile's aggregate ✓ / ♥ replaces the cover's own badge */
+.grid-item.stack-cover > .watched-badge { display: none; }
+
+.stack-count-badge {
+  position: absolute;
+  bottom: 6px; right: 6px;
+  min-width: 26px; height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: rgba(245, 200, 66, 0.92);
+  color: #1a1a1a;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 4;
+  pointer-events: none;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+  transition: opacity 0.18s;
+}
+.grid-item:hover .stack-count-badge { opacity: 0; }   /* hover overlay shows the title there */
+
+.stack-status-badge {
+  position: absolute;
+  top: 4px; left: 4px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11px;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1;
+  pointer-events: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+.grid-item:hover .stack-status-badge { opacity: 0; }  /* trash button shares the corner */
+
+/* Expanded variants: full-width row in the grid flow, right below the pile */
+.stack-expand-row {
+  grid-column: 1 / -1;
+  padding: 12px 16px 16px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(245, 200, 66, 0.3);
+  border-radius: var(--radius);
+}
+.stack-expand-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+.stack-expand-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stack-expand-count { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.stack-collapse-btn {
+  margin-left: auto;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 11px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.stack-collapse-btn:hover { color: var(--text); border-color: var(--border-hi); }
+.stack-expand-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.group-expand-card { position: relative; }   /* anchors ×N / ✓ badges */
+
+/* Fly-in/out clones used while switching modes */
+.stack-ghost {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  border-radius: var(--radius);
+  overflow: hidden;
+  transform-origin: top left;
+}
+.stack-ghost img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Lightbox: "Poster 2 of 4" + Set as stack cover */
+.lb-variant-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -4px 0 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.lb-variant-cover-btn {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  border: 1px solid rgba(245, 200, 66, 0.4);
+  background: transparent;
+  color: #f5c842;
+  cursor: pointer;
+}
+.lb-variant-cover-btn:hover:not(:disabled) { background: rgba(245, 200, 66, 0.14); }
+.lb-variant-cover-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* Mobile: expanded variants scroll sideways */
+@media (max-width: 700px) {
+  .stack-expand-row { padding: 10px 0 12px; }
+  .stack-expand-head { padding: 0 10px; }
+  .stack-expand-cards {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 8px;
+    padding: 0 10px 4px;
+    scrollbar-width: none;
+  }
+  .stack-expand-cards::-webkit-scrollbar { display: none; }
+  .stack-expand-cards .stack-expand-card { width: 42vw; scroll-snap-align: start; }
 }
 
 /* Reduced motion */

@@ -287,7 +287,7 @@ async function _doDelete(item) {
     const countEl = document.getElementById('total-count');
     if (countEl) countEl.textContent = document.querySelectorAll('.grid-item').length + ' titles';
     // Re-run current filter so counts stay consistent
-    _applySearchAndFilter((document.getElementById('searchBar')?.value || '').toLowerCase().trim(), currentFilter);
+    _applySearchAndFilter(_currentSearchTerm(), currentFilter);
   } catch (err) {
     showToast('Network error', 'error');
   }
@@ -380,29 +380,314 @@ function _syncLightboxWatchBtns(status) {
   if (btnT) btnT.classList.toggle('lb-watch-active', status === 'want_to_watch');
 }
 
+// ── Smart search ──────────────────────────────────────────────────────────────
+// Every title is indexed under three forms — raw tokens, numbers-as-digits
+// ("twelve" / "XII" → "12") and numbers-as-words ("10" → "ten") — and the query
+// under raw + digits, so "ten", "10", "twelve angry men" and "rocky ii" all
+// line up.  Each form is also compared with spaces removed ("clover field" →
+// "cloverfield", "spider man" → "spiderman").
+//
+// Rank (lower is better): 0 exact · 1 title starts with query ·
+// 2 every query token found · 3 fuzzy (typo-tolerant) · -1 no match.
+
+const _ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+  'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen',
+  'eighteen', 'nineteen'];
+const _TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+const _WORD_NUM = {};
+_ONES.forEach(function (w, i) { _WORD_NUM[w] = i; });
+_TENS.forEach(function (w, i) { if (w) _WORD_NUM[w] = i * 10; });
+_WORD_NUM.fourty = 40;   // common misspelling
+const _ARTICLES  = { the: 1, a: 1, an: 1 };
+const _ROMAN_RE  = /^(x{0,3})(ix|iv|v?i{0,3})$/;
+// Single-letter i / v / x only count as numerals at the end of a multi-word title
+// ("Rocky V", "Malcolm X") — never "X-Men", "Godzilla x Kong" or "I, Robot".
+const _ROMAN_VAL = { i: 1, v: 5, x: 10 };
+
+/** 0–999 → ["one", "hundred", "twenty", "seven"]. */
+function _numToWords(n) {
+  if (n < 20) return [_ONES[n]];
+  if (n < 100) return [_TENS[Math.floor(n / 10)]].concat(n % 10 ? [_ONES[n % 10]] : []);
+  return [_ONES[Math.floor(n / 100)], 'hundred'].concat(n % 100 ? _numToWords(n % 100) : []);
+}
+
+/** Standalone roman numeral token (i–xxxix) → integer, else null. */
+function _romanToInt(tok) {
+  if (!tok || !_ROMAN_RE.test(tok)) return null;
+  let total = 0;
+  for (let i = 0; i < tok.length; i++) {
+    const v = _ROMAN_VAL[tok[i]], next = _ROMAN_VAL[tok[i + 1]] || 0;
+    total += v < next ? -v : v;
+  }
+  return total || null;
+}
+
+/** Number words and roman numerals → digit tokens ("two thousand and one" → "2001"). */
+function _tokensToDigits(tokens) {
+  const out = [];
+  let cur = null;
+  const flush = function () { if (cur !== null) { out.push(String(cur)); cur = null; } };
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t === 'hundred'  && cur !== null && cur < 10)   { cur *= 100;  continue; }
+    if (t === 'thousand' && cur !== null && cur < 1000) { cur *= 1000; continue; }
+    if (t === 'and' && cur !== null && cur >= 100 && cur % 100 === 0 &&
+        _WORD_NUM[tokens[i + 1]] !== undefined) continue;
+    const v = _WORD_NUM[t];
+    if (v !== undefined) {
+      const roundHundreds = cur !== null && cur >= 100 && cur % 100 === 0;
+      const tensOnly      = cur !== null && cur % 100 >= 20 && cur % 10 === 0;
+      if (cur === null) cur = v;
+      else if (roundHundreds || (tensOnly && v > 0 && v < 10)) cur += v;
+      else { flush(); cur = v; }
+      continue;
+    }
+    flush();
+    const r = (t.length > 1 || (i === tokens.length - 1 && i > 0)) ? _romanToInt(t) : null;
+    out.push(r !== null ? String(r) : t);
+  }
+  flush();
+  return out;
+}
+
+/** Digit tokens ≤ 999 → number words ("10" → "ten", "127" → "one hundred twenty seven"). */
+function _tokensToWords(tokens) {
+  const out = [];
+  tokens.forEach(function (t) {
+    if (/^\d{1,3}$/.test(t)) out.push.apply(out, _numToWords(parseInt(t, 10)));
+    else out.push(t);
+  });
+  return out;
+}
+
+/** Lowercase, strip accents and punctuation, & → and, collapse whitespace, drop a leading article. */
+function normalize(s) {
+  const tokens = String(s || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/['‘’`]/g, '')        // "schindler's" → "schindlers"
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean);
+  if (tokens.length > 1 && _ARTICLES[tokens[0]]) tokens.shift();
+  return tokens;
+}
+
+function _searchForm(tokens) {
+  const str = tokens.join(' ');
+  return { tokens: tokens, str: str, compact: str.replace(/ /g, '') };
+}
+
+/** All forms a string should be matched under (deduplicated). */
+function _searchForms(s, withWords) {
+  const raw   = normalize(s);
+  const lists = [raw, _tokensToDigits(raw)];
+  if (withWords) lists.push(_tokensToWords(lists[1]));
+  const seen = {};
+  return lists.filter(function (l) {
+    const k = l.join(' ');
+    if (seen[k]) return false;
+    seen[k] = 1;
+    return true;
+  }).map(_searchForm);
+}
+
+/** Levenshtein distance with an early exit once it exceeds `max`. */
+function _lev(a, b, max) {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = new Array(b.length + 1);
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (cur[j] < rowMin) rowMin = cur[j];
+    }
+    if (rowMin > max) return max + 1;
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+function _similarity(a, b) {
+  const len = Math.max(a.length, b.length);
+  return len ? 1 - _lev(a, b, len) / len : 1;
+}
+
+function _rankForms(q, t) {
+  if (q.str === t.str || q.compact === t.compact) return 0;
+  if (t.str.startsWith(q.str) || t.compact.startsWith(q.compact)) return 1;
+  const allTokens = q.tokens.every(function (qt) {
+    return t.tokens.some(function (tt) { return tt.startsWith(qt); });
+  });
+  if (allTokens || t.compact.includes(q.compact)) return 2;
+  return -1;
+}
+
+function _fuzzyForms(q, t) {
+  return q.tokens.every(function (qt) {
+    // Numbers never fuzzy-match ("2001" must not find "2007")
+    const max = /^\d+$/.test(qt) ? 0 : qt.length >= 8 ? 2 : qt.length >= 4 ? 1 : 0;
+    return t.tokens.some(function (tt) {
+      if (tt.startsWith(qt)) return true;
+      if (!max) return false;
+      // Also compare against the same-length prefix, so a typo still matches mid-word
+      return _lev(qt, tt, max) <= max || _lev(qt, tt.slice(0, qt.length), max) <= max;
+    });
+  });
+}
+
+const _searchIndexCache = new WeakMap();   // grid item → { title, forms }
+
+function _titleForms(item) {
+  const title = item.dataset.title || '';
+  let hit = _searchIndexCache.get(item);
+  if (!hit || hit.title !== title) {
+    hit = { title: title, forms: _searchForms(title, true) };
+    _searchIndexCache.set(item, hit);
+  }
+  return hit.forms;
+}
+
+let _lastQuery = { term: null, forms: null };
+
+/** Parsed query forms for a search term (memoised for the last term). */
+function _searchQuery(term) {
+  if (_lastQuery.term !== term) {
+    const forms = _searchForms(term, false).filter(function (f) { return f.compact; });
+    _lastQuery = { term: term, forms: forms.length ? forms : null };
+  }
+  return _lastQuery.forms;
+}
+
+/** Rank of a grid item for query forms (see top of section), or -1. */
+function _searchRank(item, qForms) {
+  if (!qForms) return 0;
+  const tForms = _titleForms(item);
+  let best = -1;
+  qForms.forEach(function (q) {
+    tForms.forEach(function (t) {
+      const r = _rankForms(q, t);
+      if (r >= 0 && (best < 0 || r < best)) best = r;
+    });
+  });
+  if (best >= 0) return best;
+  const fuzzy = qForms.some(function (q) {
+    return tForms.some(function (t) { return _fuzzyForms(q, t); });
+  });
+  return fuzzy ? 3 : -1;
+}
+
+function _currentSearchTerm() {
+  return (document.getElementById('searchBar')?.value || '').toLowerCase().trim();
+}
+
+/** Up to 3 distinct titles closest to the query, among items passing the status filter. */
+function _searchSuggestions(qForms, filter) {
+  const scored = {};
+  document.querySelectorAll('.grid-item').forEach(function (item) {
+    if (!_filterMatches(item, filter)) return;
+    const tForms = _titleForms(item);
+    const key    = tForms[0].compact;
+    if (!key || scored[key]) return;
+    let score = 0;
+    qForms.forEach(function (q) {
+      tForms.forEach(function (t) {
+        score = Math.max(score,
+          _similarity(q.compact, t.compact),
+          // the query may be a typo'd prefix of a longer title
+          _similarity(q.compact, t.compact.slice(0, q.compact.length)) * 0.92);
+      });
+    });
+    scored[key] = { title: item.dataset.title, score: score };
+  });
+  return Object.values(scored)
+    .filter(function (s) { return s.score >= 0.6; })
+    .sort(function (a, b) { return b.score - a.score; })
+    .slice(0, 3);
+}
+
+/** "Did you mean: …?" line above the grid, shown when nothing (or only fuzzy hits) matched. */
+function _renderSearchSuggest(term, qForms, filter, strongCount, visibleCount) {
+  const box = document.getElementById('search-suggest');
+  if (!box) return;
+  box.innerHTML = '';
+  if (!qForms || strongCount > 0) { box.hidden = true; return; }
+  const suggestions = _searchSuggestions(qForms, filter);
+  if (!suggestions.length) {
+    if (visibleCount) { box.hidden = true; return; }
+    box.textContent = 'No posters match “' + term + '”' +
+      (filter !== 'all' ? ' with the current filter' : '');
+    box.hidden = false;
+    return;
+  }
+  box.appendChild(document.createTextNode('Did you mean: '));
+  suggestions.forEach(function (s, i) {
+    if (i) box.appendChild(document.createTextNode(', '));
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'search-suggest-link';
+    btn.textContent = s.title;
+    btn.addEventListener('click', function () {
+      const bar = document.getElementById('searchBar');
+      if (bar) { bar.value = s.title; bar.focus(); }
+      _applySearchAndFilter(s.title.toLowerCase().trim(), currentFilter);
+    });
+    box.appendChild(btn);
+  });
+  box.appendChild(document.createTextNode('?'));
+  box.hidden = false;
+}
+
 // ── Filter ────────────────────────────────────────────────────────────────────
 
 let currentFilter = 'all';
 
-function _itemMatches(item, term, filter) {
-  const titleMatch  = !term || (item.dataset.title || '').toLowerCase().includes(term);
+function _filterMatches(item, filter) {
   const watchStatus = item.dataset.watched || '';
-  const filterMatch =
-    filter === 'all' ||
+  return filter === 'all' ||
     (filter === 'watched'       && watchStatus === 'watched') ||
     (filter === 'want_to_watch' && watchStatus === 'want_to_watch') ||
     (filter === 'unwatched'     && watchStatus === '');
-  return titleMatch && filterMatch;
+}
+
+function _itemMatches(item, term, filter) {
+  return _filterMatches(item, filter) && (!term || _searchRank(item, _searchQuery(term)) >= 0);
+}
+
+/** Best rank of any variant in the item's stack that passes search + filter, or -1. */
+function _stackRank(item, qForms, filter) {
+  let best = -1;
+  _stackMembers(item).forEach(function (m) {
+    if (!_filterMatches(m, filter)) return;
+    const r = qForms ? _searchRank(m, qForms) : 0;
+    if (r >= 0 && (best < 0 || r < best)) best = r;
+  });
+  return best;
 }
 
 function _applySearchAndFilter(term, filter) {
+  _syncStacks();
+  _collapseStackRows(true);
   const allItems = document.querySelectorAll('.grid-item');
-  let visible = 0;
+  const qForms   = term ? _searchQuery(term) : null;
+  let visible = 0, strong = 0;
   allItems.forEach(function (item) {
-    const show = _itemMatches(item, term, filter);
+    // Stacked mode: a pile shows if any of its variants matches
+    const rank = _stackMode ? _stackRank(item, qForms, filter)
+               : (qForms ? _searchRank(item, qForms) : 0);
+    const show = rank >= 0 && (_stackMode || _filterMatches(item, filter)) &&
+                 !item.classList.contains('stack-hidden');
     item.style.display = show ? 'block' : 'none';
-    if (show) visible++;
+    // Grid `order` ranks results without reordering the DOM (pagination relies on DOM order)
+    item.style.order = qForms && show ? String(rank + 1) : '';
+    if (show) { visible++; if (rank < 3) strong++; }
   });
+  _renderSearchSuggest(term, qForms, filter, strong, visible);
   // When no active filter/search just hand back to pagination
   if (!term && filter === 'all') {
     changePage(0);
@@ -421,10 +706,7 @@ function _applyFilter(filter) {
   document.querySelectorAll('.nav-filter-btn').forEach(function (btn) {
     btn.classList.toggle('active', btn.dataset.filter === filter);
   });
-  _applySearchAndFilter(
-    (document.getElementById('searchBar')?.value || '').toLowerCase().trim(),
-    filter
-  );
+  _applySearchAndFilter(_currentSearchTerm(), filter);
 }
 
 // ── Personal star rating ──────────────────────────────────────────────────────
@@ -823,8 +1105,9 @@ function _resetCustomPanel() {
 // ── Lightbox helpers ──────────────────────────────────────────────────────────
 
 /**
- * Set the lightbox image, sync the blurred backdrop, and resize the left panel
- * to naturally fit the poster's aspect ratio (clamped to 38%–68% of dialog width).
+ * Set the lightbox image, sync the blurred backdrop, and give the left panel the
+ * poster's aspect ratio. The dialog is width:fit-content, so it wraps
+ * poster + sidebar exactly with no empty space beside the sidebar.
  */
 function _setLightboxSrc(url) {
   const img  = document.getElementById('lightboxImage');
@@ -832,7 +1115,7 @@ function _setLightboxSrc(url) {
 
   if (!url) {
     if (img)  { img.src = ''; img.onload = null; img.style.transform = ''; }
-    if (wrap) { wrap.style.backgroundImage = ''; wrap.style.flex = ''; }
+    if (wrap) { wrap.style.backgroundImage = ''; wrap.style.aspectRatio = ''; }
     return;
   }
 
@@ -841,18 +1124,9 @@ function _setLightboxSrc(url) {
   if (img) {
     img.onload = function () {
       if (!wrap || !img.naturalWidth) return;
-      // Stacked bottom-sheet layout: flex-basis would set height, so leave it to CSS
-      if (_mobileMQ.matches) { wrap.style.flex = ''; return; }
-      const ratio   = img.naturalWidth / img.naturalHeight;
-      const wrapH   = wrap.clientHeight || (window.innerHeight * 0.88);
-      const dialog  = wrap.parentElement;
-      const dialogW = dialog ? dialog.clientWidth : window.innerWidth * 0.92;
-      // Ideal width: the width the poster would occupy at full height with object-fit:contain
-      const ideal   = ratio * wrapH;
-      const minW    = 0.38 * dialogW;
-      const maxW    = 0.68 * dialogW;
-      const targetW = Math.min(Math.max(ideal, minW), maxW);
-      wrap.style.flex = '0 0 ' + targetW + 'px';
+      // Width follows from height × ratio (CSS caps it so the sidebar always fits);
+      // the mobile stacked layout ignores it via CSS
+      wrap.style.aspectRatio = img.naturalWidth + ' / ' + img.naturalHeight;
     };
     img.src = url;
   }
@@ -968,6 +1242,7 @@ function openLightbox(imageSrc, element) {
     '</div>';
   document.getElementById('closeLightbox').insertAdjacentElement('afterend', meta);
   _renderPersonalStars(personalRating);
+  _renderLbVariantRow();
   _loadCollectionCombo(collection);
   // Apply saved custom styles
   _applyCustomStyle(_loadCustomStyle());
@@ -1014,8 +1289,20 @@ function _lightboxSequence() {
   if (_groupViewActive && cur && cur.dataset.collection) {
     return all.filter(function (i) { return i.dataset.collection === cur.dataset.collection; });
   }
-  const term = (document.getElementById('searchBar')?.value || '').toLowerCase().trim();
-  return all.filter(function (i) { return _itemMatches(i, term, currentFilter); });
+  const term = _currentSearchTerm();
+  const q    = term ? _searchQuery(term) : null;
+  if (_stackMode) {
+    // Each movie's variants first, then on to the next pile, in grid order
+    const units = _pageUnits()
+      .map(function (u) { return { u: u, r: _stackRank(u, q, currentFilter) }; })
+      .filter(function (o) { return o.r >= 0; });
+    if (q) units.sort(function (a, b) { return a.r - b.r; });
+    return units.reduce(function (acc, o) { return acc.concat(_stackMembers(o.u)); }, []);
+  }
+  const seq = all.filter(function (i) { return _itemMatches(i, term, currentFilter); });
+  if (!q) return seq;
+  // Step in the same ranked order the grid shows (Array#sort is stable)
+  return seq.sort(function (a, b) { return _searchRank(a, q) - _searchRank(b, q); });
 }
 
 function lightboxStep(dir) {
@@ -1369,9 +1656,10 @@ function addNewPosterToGrid(filename, title, year) {
     countEl.textContent = document.querySelectorAll('.grid-item').length + ' titles';
   }
 
-  // Navigate to last page so the new poster is visible
-  const total = document.querySelectorAll('.grid-item').length;
-  currentPage = Math.ceil(total / itemsPerPage);
+  // Navigate to the page holding the new poster (or its pile, in stacked mode)
+  _syncStacks();
+  const slot = _stackMode ? (_stackOf.get(div)?.cover || div) : div;
+  currentPage = Math.floor(Math.max(0, _pageUnits().indexOf(slot)) / itemsPerPage) + 1;
   changePage(0);
 }
 
@@ -1393,7 +1681,10 @@ function adjustCardSize(delta) {
 
 // ── Pagination ────────────────────────────────────────────────────────────────
 function changePage(direction) {
-  const allItems   = document.querySelectorAll('.grid-item');
+  _syncStacks();
+  _collapseStackRows(true);
+  // Pages count slots: in stacked mode a pile is one slot and its hidden variants none
+  const allItems   = _pageUnits();
   const totalPages = Math.ceil(allItems.length / itemsPerPage) || 1;
 
   currentPage += direction;
@@ -1430,7 +1721,7 @@ function toggleGroupView() {
   } else {
     if (pgBar) pgBar.style.display = '';
     _clearGroupView();
-    changePage(0); // restore normal page view
+    _applySearchAndFilter(_currentSearchTerm(), currentFilter); // restore normal (or searched) view
   }
 }
 
@@ -1446,19 +1737,45 @@ function _applyGroupView() {
 
   // Collect ALL grid items and build group map (order = DOM order)
   const allItems = Array.from(document.querySelectorAll('.grid-item'));
+  const term     = _currentSearchTerm();
   const groups   = {};
+  let anyGrouped = false;
   allItems.forEach(function (item) {
     const col = (item.dataset.collection || '').trim();
     if (!col) return;
+    anyGrouped = true;
+    // Search + status filter narrow the groups the same way they narrow the grid
+    if (!_itemMatches(item, term, currentFilter)) return;
     if (!groups[col]) groups[col] = [];
     groups[col].push(item);
   });
+
+  // Stacked mode: collections show one card per movie (its cover when the cover is in the group)
+  const stackCount = new Map();
+  if (_stackMode) {
+    Object.keys(groups).forEach(function (col) {
+      const byKey = new Map();
+      groups[col].forEach(function (item) {
+        const st = _stackOf.get(item);
+        const k  = st ? st.key : item.dataset.filename;
+        if (!byKey.has(k)) byKey.set(k, []);
+        byKey.get(k).push(item);
+      });
+      groups[col] = [];
+      byKey.forEach(function (list) {
+        const st  = _stackOf.get(list[0]);
+        const rep = (st && list.indexOf(st.cover) >= 0) ? st.cover : list[0];
+        stackCount.set(rep, list.length);
+        groups[col].push(rep);
+      });
+    });
+  }
 
   // Hide every individual grid item (ungrouped ones stay hidden; grouped ones
   // are represented by proxy cards)
   allItems.forEach(function (item) { item.classList.add('group-view-hidden'); });
 
-  if (Object.keys(groups).length === 0) {
+  if (!anyGrouped) {
     showToast('No posters are assigned to a group yet', '');
     // Restore items and turn off group view
     allItems.forEach(function (item) { item.classList.remove('group-view-hidden'); });
@@ -1496,7 +1813,7 @@ function _applyGroupView() {
     overlay.className = 'group-proxy-overlay';
     overlay.innerHTML =
       '<span class="group-proxy-name">' + escHtml(groupName) + '</span>' +
-      '<span class="group-proxy-count">' + items.length + '\u00a0poster' +
+      '<span class="group-proxy-count">' + items.length + '\u00a0' + (_stackMode ? 'title' : 'poster') +
         (items.length !== 1 ? 's' : '') + '</span>';
     proxy.appendChild(overlay);
 
@@ -1507,7 +1824,7 @@ function _applyGroupView() {
     proxy.appendChild(badge);
 
     proxy.addEventListener('click', function () {
-      _toggleGroupExpand(groupName, proxy, items);
+      _toggleGroupExpand(groupName, proxy, items, stackCount);
     });
 
     container.appendChild(proxy);
@@ -1528,7 +1845,7 @@ function _clearGroupView() {
  * Toggle the inline expand row below a group proxy card.
  * Shows all group members at a comfortable large size (min 200px).
  */
-function _toggleGroupExpand(groupName, proxyCard, items) {
+function _toggleGroupExpand(groupName, proxyCard, items, stackCount) {
   const rowId   = 'gex-' + groupName.replace(/[^a-z0-9]/gi, '_');
   const existing = document.getElementById(rowId);
   if (existing) {
@@ -1557,6 +1874,13 @@ function _toggleGroupExpand(groupName, proxyCard, items) {
     const label = document.createElement('div');
     label.className = 'group-expand-label';
     label.textContent = item.dataset.title || '';
+    const n = stackCount ? stackCount.get(item) || 1 : 1;
+    if (n > 1) {
+      const badge = document.createElement('div');
+      badge.className   = 'stack-count-badge';
+      badge.textContent = '\u00d7' + n;
+      card.appendChild(badge);
+    }
 
     card.appendChild(thumb);
     card.appendChild(label);
@@ -1571,6 +1895,368 @@ function _toggleGroupExpand(groupName, proxyCard, items) {
   // Insert after the proxy card; grid-column:1/-1 places it on its own full row
   proxyCard.insertAdjacentElement('afterend', row);
   proxyCard.classList.add('group-expanded');
+}
+
+// ── Stack Duplicates ──────────────────────────────────────────────────────────
+// Alternate posters of one movie (same title + year, i.e. the same metadata
+// cache key) form a "stack". Stacked mode shows one card per stack (the chosen
+// cover, else the first file alphabetically) with a ×N badge; every file stays
+// its own poster with its own status, rating and collection.
+
+let _stackMode   = false;
+let _stackCovers = window.STACK_COVERS || {};    // { stack key: cover filename }
+let _stackSig    = '';                           // membership signature, see _syncStacks
+const _stackOf   = new WeakMap();                // grid item → { key, members, cover }
+
+/** Same shape as data.norm_key(title, year): lowercase alnum + spaces, plus the 4-digit year. */
+function _stackKey(item) {
+  const base = (item.dataset.title || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+  const yr   = ((item.dataset.year || '').match(/\d{4}/) || [''])[0];
+  return yr ? base + ' ' + yr : base;
+}
+
+function _fileStem(item) {
+  return (item.dataset.filename || '').replace(/\.[^.]+$/, '').toLowerCase();
+}
+
+function _stackMembers(item) {
+  const st = _stackOf.get(item);
+  return st ? st.members : [item];
+}
+
+/** Grid items that occupy a slot (pagination unit): everything except hidden stack variants. */
+function _pageUnits() {
+  return Array.from(document.querySelectorAll('.grid-item'))
+    .filter(function (i) { return !i.classList.contains('stack-hidden'); });
+}
+
+/**
+ * Rebuild stack membership from the grid and (re)decorate cover cards.
+ * Idempotent — only touches the DOM where state changed. Returns true when
+ * membership or covers changed since the last call.
+ */
+function _syncStacks() {
+  const items = Array.from(document.querySelectorAll('.grid-item'));
+  const map   = new Map();
+  items.forEach(function (it) {
+    const k = _stackKey(it);
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push(it);
+  });
+  const sigParts = [];
+  map.forEach(function (members, key) {
+    // Alphabetical by name without extension, so "1917" sorts before "1917 (2)"
+    members.sort(function (a, b) {
+      const fa = _fileStem(a), fb = _fileStem(b);
+      return fa < fb ? -1 : fa > fb ? 1 : 0;
+    });
+    const cover = members.find(function (m) { return m.dataset.filename === _stackCovers[key]; }) || members[0];
+    const st    = { key: key, members: members, cover: cover };
+    members.forEach(function (m) { _stackOf.set(m, st); });
+    if (members.length > 1) sigParts.push(key + '\u0001' + cover.dataset.filename + '\u0001' + members.length);
+  });
+
+  items.forEach(function (it) {
+    const st      = _stackOf.get(it);
+    const multi   = st.members.length > 1;
+    const isCover = _stackMode && multi && st.cover === it;
+    it.classList.toggle('stack-hidden', _stackMode && multi && st.cover !== it);
+    it.classList.toggle('stack-cover', isCover);
+    // Aggregate badges: ✓ if any variant is watched, else ♥ if any is want-to-watch
+    let state = '';
+    if (isCover) {
+      const statuses = st.members.map(function (m) { return m.dataset.watched || ''; });
+      const agg = statuses.indexOf('watched') >= 0 ? 'watched'
+                : statuses.indexOf('want_to_watch') >= 0 ? 'want_to_watch' : '';
+      state = st.members.length + '|' + agg;
+    }
+    if ((it.dataset.stackBadge || '') === state) return;
+    it.dataset.stackBadge = state;
+    it.querySelector('.stack-count-badge')?.remove();
+    it.querySelector('.stack-status-badge')?.remove();
+    if (!state) return;
+    const parts = state.split('|');
+    const count = document.createElement('div');
+    count.className   = 'stack-count-badge';
+    count.textContent = '×' + parts[0];
+    count.setAttribute('aria-label', parts[0] + ' posters');
+    it.appendChild(count);
+    if (parts[1]) {
+      const badge = document.createElement('div');
+      badge.className   = 'stack-status-badge ' + (parts[1] === 'watched' ? 'watched-badge-done' : 'watched-badge-want');
+      badge.textContent = parts[1] === 'watched' ? '✓' : '♥';
+      it.appendChild(badge);
+    }
+  });
+
+  const countEl = document.getElementById('total-count');
+  if (countEl) {
+    countEl.textContent = (_stackMode ? map.size : items.length) + ' titles';
+    countEl.title       = _stackMode ? items.length + ' posters in ' + map.size + ' stacks' : '';
+  }
+
+  const sig     = sigParts.join('\u0002');
+  const changed = sig !== _stackSig;
+  _stackSig = sig;
+  return changed;
+}
+
+function _syncStackButton() {
+  const btn   = document.getElementById('stack-btn');
+  const label = document.getElementById('stack-btn-label');
+  if (btn) {
+    btn.classList.toggle('active', _stackMode);
+    btn.setAttribute('aria-pressed', _stackMode ? 'true' : 'false');
+  }
+  if (label) label.textContent = _stackMode ? 'Show All' : 'Stack';
+}
+
+/** Visible card rects near the viewport, keyed by grid item. */
+function _visibleRects() {
+  const rects = new Map();
+  const vh    = window.innerHeight;
+  document.querySelectorAll('.grid-item').forEach(function (it) {
+    if (it.offsetParent === null) return;
+    const r = it.getBoundingClientRect();
+    if (r.bottom < -150 || r.top > vh + 150) return;
+    rects.set(it, r);
+  });
+  return rects;
+}
+
+/**
+ * FLIP animation around a stack/unstack switch: cards that stay slide to their
+ * new slot, cards that leave fly into their pile's cover, and cards that appear
+ * fly out of it. (A View Transition can't do this: every
+ * view-transition-name must be unique, so several cards can't merge into one.)
+ */
+function _animateStackSwitch(apply) {
+  if (_reducedMotion() || !Element.prototype.animate) { apply(); return; }
+  const before = _visibleRects();
+  apply();
+  const after  = _visibleRects();
+  const ease   = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
+  let n = 0;
+
+  after.forEach(function (r, it) {
+    let from = before.get(it);
+    let appearing = false;
+    if (!from) {
+      const st = _stackOf.get(it);
+      from = st && before.get(st.cover);
+      appearing = true;
+    }
+    if (!from) return;
+    const dx = from.left - r.left, dy = from.top - r.top;
+    if (!appearing && Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+    it.animate([
+      { transform: 'translate(' + dx + 'px,' + dy + 'px)' + (appearing ? ' scale(0.9)' : ''), opacity: appearing ? 0 : 1 },
+      { transform: 'none', opacity: 1 },
+    ], { duration: 420, easing: ease, delay: appearing ? Math.min(n++ * 12, 220) : 0, fill: 'backwards' });
+  });
+
+  before.forEach(function (r, it) {
+    if (after.has(it)) return;
+    const st     = _stackOf.get(it);
+    const target = st && after.get(st.cover);
+    const img    = it.querySelector('img');
+    if (!img) return;
+    const ghost = document.createElement('div');
+    ghost.className = 'stack-ghost';
+    ghost.style.cssText = 'left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px;';
+    ghost.appendChild(img.cloneNode(false));
+    document.body.appendChild(ghost);
+    const to = target
+      ? 'translate(' + (target.left - r.left) + 'px,' + (target.top - r.top) + 'px) scale(' + (target.width / r.width) + ')'
+      : 'scale(0.9)';
+    ghost.animate([{ transform: 'none', opacity: 1 }, { transform: to, opacity: 0 }],
+      { duration: 380, easing: ease, fill: 'forwards' })
+      .finished.then(function () { ghost.remove(); }, function () { ghost.remove(); });
+  });
+}
+
+/** Nav toggle: Stack ↔ Show All. Keeps the first visible poster on screen. */
+function toggleStackMode(force) {
+  const on = typeof force === 'boolean' ? force : !_stackMode;
+  if (on === _stackMode) { _syncStackButton(); return; }
+  const anchor = _pageUnits().find(function (i) { return i.style.display !== 'none'; });
+
+  _animateStackSwitch(function () {
+    _collapseStackRows(true);
+    _stackMode = on;
+    try { localStorage.setItem('stack_mode', on ? '1' : '0'); } catch (_) {}
+    _syncStackButton();
+    _syncStacks();
+    if (anchor && !_currentSearchTerm()) {
+      const target = on ? (_stackOf.get(anchor)?.cover || anchor) : anchor;
+      const idx    = _pageUnits().indexOf(target);
+      if (idx >= 0) currentPage = Math.floor(idx / itemsPerPage) + 1;
+    }
+    _applySearchAndFilter(_currentSearchTerm(), currentFilter);
+  });
+}
+
+/** Remove expanded variant rows (animated back into the pile unless `instant`). */
+function _collapseStackRows(instant) {
+  document.querySelectorAll('.stack-expand-row').forEach(function (row) {
+    const cover = row._cover;
+    cover?.classList.remove('stack-expanded');
+    if (instant || _reducedMotion() || !row.animate || !cover || cover.offsetParent === null) { row.remove(); return; }
+    const c = cover.getBoundingClientRect();
+    row.querySelectorAll('.group-expand-card').forEach(function (card) {
+      const r = card.getBoundingClientRect();
+      card.animate([{ transform: 'none', opacity: 1 },
+        { transform: 'translate(' + (c.left - r.left) + 'px,' + (c.top - r.top) + 'px) scale(0.6)', opacity: 0 }],
+        { duration: 220, easing: 'ease-in', fill: 'forwards' });
+    });
+    row.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, fill: 'forwards' })
+      .finished.then(function () { row.remove(); }, function () { row.remove(); });
+  });
+}
+
+/** Clicking a stacked cover expands its variants inline (full-width row below it). */
+function _toggleStackExpand(cover) {
+  const st = _stackOf.get(cover);
+  if (!st) return;
+  const wasOpen = cover.classList.contains('stack-expanded');
+  _collapseStackRows(false);
+  if (wasOpen) return;
+
+  const row = document.createElement('div');
+  row.className   = 'stack-expand-row';
+  row._cover      = cover;
+  row.style.order = cover.style.order;   // keep it next to the cover while search ranking is active
+
+  const head = document.createElement('div');
+  head.className = 'stack-expand-head';
+  head.innerHTML =
+    '<span class="stack-expand-title">' + escHtml(cover.dataset.title || '') + '</span>' +
+    '<span class="stack-expand-count">' + st.members.length + ' posters</span>';
+  const collapse = document.createElement('button');
+  collapse.type        = 'button';
+  collapse.className   = 'stack-collapse-btn';
+  collapse.textContent = 'Collapse';
+  collapse.addEventListener('click', function () { _collapseStackRows(false); });
+  head.appendChild(collapse);
+  row.appendChild(head);
+
+  const cards = document.createElement('div');
+  cards.className = 'stack-expand-cards';
+  st.members.forEach(function (item, i) {
+    const img = item.querySelector('img');
+    if (!img) return;
+    const card = document.createElement('div');
+    card.className = 'group-expand-card stack-expand-card';
+    const thumb = document.createElement('img');
+    thumb.src = img.src; thumb.alt = item.dataset.title || ''; thumb.decoding = 'async';
+    const label = document.createElement('div');
+    label.className   = 'group-expand-label';
+    label.textContent = 'Poster ' + (i + 1) + ' of ' + st.members.length + (item === st.cover ? ' · cover' : '');
+    card.appendChild(thumb);
+    card.appendChild(label);
+    const status = item.dataset.watched;
+    if (status) {
+      const b = document.createElement('div');
+      b.className   = 'stack-status-badge ' + (status === 'watched' ? 'watched-badge-done' : 'watched-badge-want');
+      b.textContent = status === 'watched' ? '✓' : '♥';
+      card.appendChild(b);
+    }
+    card.addEventListener('click', function (e) { e.stopPropagation(); openLightbox(img.src, img); });
+    cards.appendChild(card);
+  });
+  row.appendChild(cards);
+
+  cover.insertAdjacentElement('afterend', row);
+  cover.classList.add('stack-expanded');
+
+  // Cards fan out of the pile
+  if (!_reducedMotion() && row.animate) {
+    const c = cover.getBoundingClientRect();
+    cards.querySelectorAll('.stack-expand-card').forEach(function (card, i) {
+      const r = card.getBoundingClientRect();
+      card.animate([
+        { transform: 'translate(' + (c.left - r.left) + 'px,' + (c.top - r.top) + 'px) scale(0.6)', opacity: 0 },
+        { transform: 'none', opacity: 1 },
+      ], { duration: 380, delay: i * 35, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'backwards' });
+    });
+  }
+}
+
+/** "Poster 2 of 4" + "Set as stack cover" in the lightbox sidebar. */
+function _renderLbVariantRow() {
+  const meta = document.getElementById('metadata');
+  if (!meta) return;
+  meta.querySelector('.lb-variant-row')?.remove();
+  const item = _lightboxGridItem;
+  if (!item) return;
+  _syncStacks();
+  const st = _stackOf.get(item);
+  if (!st || st.members.length < 2) return;
+
+  const row = document.createElement('div');
+  row.className = 'lb-variant-row';
+  row.innerHTML = '<span class="lb-variant-count">Poster ' + (st.members.indexOf(item) + 1) +
+                  ' of ' + st.members.length + '</span>';
+  const btn = document.createElement('button');
+  btn.type      = 'button';
+  btn.className = 'lb-variant-cover-btn';
+  if (st.cover === item) {
+    btn.textContent = '★ Stack cover';
+    btn.disabled    = true;
+  } else {
+    btn.textContent = 'Set as stack cover';
+    btn.addEventListener('click', function () { _setStackCover(st.key, item.dataset.filename); });
+  }
+  row.appendChild(btn);
+  meta.querySelector('h2')?.insertAdjacentElement('afterend', row);
+}
+
+async function _setStackCover(key, filename) {
+  try {
+    const resp = await fetch('/set_stack_cover', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ key: key, filename: filename }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) { showToast(data.error || 'Could not set cover', 'error'); return; }
+    _stackCovers[key] = filename;
+    if (_syncStacks() && _stackMode) _applySearchAndFilter(_currentSearchTerm(), currentFilter);
+    _renderLbVariantRow();
+    showToast('Stack cover set');
+  } catch (err) {
+    showToast('Network error', 'error');
+  }
+}
+
+/** Wire the toggle, cover clicks and live re-stacking (renames, metadata links, uploads). */
+function _initStacks() {
+  try { _stackMode = localStorage.getItem('stack_mode') === '1'; } catch (_) {}
+  _syncStackButton();
+
+  const grid = document.querySelector('.grid-container');
+  if (!grid) return;
+  // Capture phase so a stacked cover's click expands instead of reaching the img's openLightbox
+  grid.addEventListener('click', function (e) {
+    if (!_stackMode) return;
+    const cover = e.target.closest('.grid-item.stack-cover');
+    if (!cover || e.target.closest('button, input, .card-btn-group')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    _toggleStackExpand(cover);
+  }, true);
+
+  let pending = false;
+  new MutationObserver(function () {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(function () {
+      pending = false;
+      // Titles/years changed which posters belong together → re-lay out the stacked grid
+      if (_syncStacks() && _stackMode) _applySearchAndFilter(_currentSearchTerm(), currentFilter);
+    });
+  }).observe(grid, { subtree: true, childList: true, attributes: true,
+                     attributeFilter: ['data-title', 'data-year', 'data-watched'] });
 }
 
 // ── Collection combo-box (lightbox) ───────────────────────────────────────────
@@ -2725,8 +3411,12 @@ document.addEventListener('DOMContentLoaded', function () {
   // Search
   const searchBar = document.getElementById('searchBar');
   if (searchBar) {
+    let searchTimer = null;
     searchBar.addEventListener('input', function () {
-      _applySearchAndFilter(searchBar.value.toLowerCase().trim(), currentFilter);
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function () {
+        _applySearchAndFilter(_currentSearchTerm(), currentFilter);
+      }, 120);
     });
   }
 
@@ -2854,6 +3544,9 @@ document.addEventListener('DOMContentLoaded', function () {
       btn.textContent = 'Upload';
     }
   });
+
+  // Stack Duplicates (restores the saved mode before the first layout)
+  _initStacks();
 
   // Initialize first page
   changePage(0);

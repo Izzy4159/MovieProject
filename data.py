@@ -1,3 +1,4 @@
+import os
 import requests
 import json
 import re
@@ -6,9 +7,19 @@ import urllib.parse
 import difflib
 import time
 
-# 🔒 Hardcoded for your local use
-OMDB_API_KEY = "ab30acaf"
-CACHE_FILE = Path("omdb_cache.json")
+# Absolute paths: main.py may be launched from another working directory
+_BASE_DIR  = Path(__file__).resolve().parent
+
+# OMDb key comes from the environment (or a local, git-ignored .env file)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(_BASE_DIR / ".env")
+except ImportError:
+    pass
+OMDB_API_KEY = os.environ.get("OMDB_API_KEY", "").strip()
+if not OMDB_API_KEY:
+    print("[WARN] OMDB_API_KEY is not set: OMDb lookups will fail (see .env.example)")
+CACHE_FILE = _BASE_DIR / "omdb_cache.json"
 
 # Load cache on startup
 if CACHE_FILE.exists():
@@ -21,8 +32,8 @@ else:
     cache = {}
 
 # Optional stable ID mappings (filename -> {source,id})
-POSTER_IDS_FILE = Path("poster_ids.json")
-MANUAL_OVERRIDES_FILE = Path("manual_overrides.json")
+POSTER_IDS_FILE = _BASE_DIR / "poster_ids.json"
+MANUAL_OVERRIDES_FILE = _BASE_DIR / "manual_overrides.json"
 
 try:
     if POSTER_IDS_FILE.exists():
@@ -47,8 +58,13 @@ except Exception:
 # Matches (2024), (1999), etc. anywhere in the filename
 _YEAR_RE = re.compile(r'\((\d{4})\)')
 
-# Words to strip from filenames that are never part of a real title
-_IGNORE_WORDS = {"ver", "xlg", "poster", "intl", "cover"}
+# Variant/junk tokens that are never part of a real title: ver, ver2, v2, xlg,
+# xlgg, poster, intl, cover, #4.  Whole-token match only, so "Vertigo" or
+# "Covenant" survive.
+VARIANT_TOKEN_RE = re.compile(r'^(?:ver\d*|v\d{1,3}|xlg+|poster|intl|cover|#\d+)$', re.I)
+
+def is_variant_token(word: str) -> bool:
+    return bool(VARIANT_TOKEN_RE.match(word))
 
 def parse_filename(raw_name: str) -> tuple[str, str | None]:
     """
@@ -65,12 +81,12 @@ def parse_filename(raw_name: str) -> tuple[str, str | None]:
     year_match = _YEAR_RE.search(raw_name)
     year = year_match.group(1) if year_match else None
 
-    # Remove the (YYYY) token and any trailing/leading junk
-    name = _YEAR_RE.sub("", raw_name)
+    # Remove the (YYYY) token and any (2)/(3) duplicate-counter parens
+    name = re.sub(r'\(\d{1,2}\)', "", _YEAR_RE.sub("", raw_name))
 
     # Replace separators, split, drop ignore words
     parts = name.replace("_", " ").replace("-", " ").split()
-    cleaned = [w for w in parts if not any(w.lower().startswith(ig) for ig in _IGNORE_WORDS)]
+    cleaned = [w for w in parts if not is_variant_token(w)]
 
     title = " ".join(cleaned).strip()
     return title, year
