@@ -38,31 +38,47 @@ Every poster is handpicked, converted to `.webp`, and laid out in a responsive g
 
 ### Theater Mode (Big Picture style)
 - **Enter / exit** — the 📺 button in the nav, the **`B`** key, or **Start** on a gamepad. Goes fullscreen on enter (where the browser allows it) and leaves fullscreen on exit
-- **Morphing transition** — uses the View Transitions API so the grid morphs into the rows (and the first poster morphs into its card when it's on screen); browsers without the API, or with reduced motion on, just switch instantly
-- **Rows** — Recently Added, Want to Watch, Watched, Top Rated (your personal stars), one row per collection, then **Library** (every poster; one card per movie in Stacked mode). Built from the same data the grid uses, so nothing extra is fetched except the Recently Added list
-- **Sorting** — A–Z by default (same rules as the grid). Every row except Recently Added (always newest first) follows the sort control in the top bar: **A–Z, Z–A, Year (newest), Year (oldest), Rating (high → low)** (normalised to 0–100 so IMDb x/10 and AniList/Kitsu x/100 sort together) and **Recently added**. `O` or gamepad **Y** cycles it (`S` stays "down" for WASD); the menu works with the arrow keys. A changed sort is remembered (localStorage); **Reset to A–Z** returns to the default
-- **Focus** — the focused poster scales up with a glow; the page background crossfades to a heavily blurred, darkened copy of it, and its title, year, rating (with its source, e.g. *AniList 80/100*), your rating, watch status and plot fade in beside it
+- **Vertical grid of large posters** — 4 per row on desktop (≥ 1200 px), 3 on tablets / small laptops (768–1199 px), 2 on phones; 2:3 posters that fill the width, with the title and year under each and the rating with its source (*IMDb 7.8/10*, *AniList 80/100*) on the focused one
+- **Filter chips** across the top — **All** (default), Want to Watch, Watched, Unwatched, Recently Added, then one chip per collection
+- **Sorting** — A–Z by default (same rules as the grid). The sort control in the top bar offers **A–Z, Z–A, Year (newest), Year (oldest), Rating (high → low)** (normalised to 0–100 so IMDb x/10 and AniList/Kitsu x/100 sort together) and **Recently added**; the menu works with the arrow keys. A changed sort is remembered (localStorage); **Reset to A–Z** returns to the default. The Recently Added chip is always newest first
+- **Stacked mode** — each movie is one large card with its **×N** badge; `Enter` / **A** fans its posters out in an overlay row (`←` / `→` to pick, `Enter` to open, `Esc` / **B** to close)
+- **Focus** — the focused poster scales up ~1.08 with a glow (its neighbours don't move); the background crossfades to a heavily blurred, darkened copy of it. Up / down move a whole row and the page smooth-scrolls to keep the focused row in the upper-middle of the screen
+- **Entering** — the library grid morphs into the Big Picture grid (View Transitions where supported) and the first three rows drop in from the top with a short stagger; the rest just appear
 - **Controls**
 
-  | Action | Keyboard | Gamepad | Touch / mouse |
+  | Action | Keyboard | Gamepad | Mouse / touch |
   |---|---|---|---|
-  | Move | `←` `↑` `↓` `→` or `W` `A` `S` `D` | D-pad or left stick | Swipe rows / hover, mouse wheel |
-  | Open lightbox | `Enter` | **A** | Tap a focused card / click |
+  | Move | `←` `↑` `↓` `→` or `W` `A` `S` `D` · `PgUp` `PgDn` `Home` `End` | D-pad or left stick | Hover focuses; wheel / swipe scrolls |
+  | Open (or fan out a stack) | `Enter` | **A** | Click / tap |
+  | Previous / next filter chip | `Q` / `E` | **LB** / **RB** | Click a chip |
   | Cycle sort | `O` | **Y** | Sort button (top bar) |
-  | Back (close lightbox, then exit) | `Esc` | **B** | ✕ Exit button |
-  | Toggle theater | `B` | **Start** | 📺 nav button |
+  | Back (close lightbox / stack row, then exit) | `Esc` | **B** | ✕ Exit button |
+  | Toggle Big Picture | `B` | **Start** | 📺 nav button |
 
-  Inside the lightbox, `←` / `→` (or the D-pad) step through the current row. In fullscreen, Chrome/Edge use the Keyboard Lock API so `Esc` closes the lightbox first instead of dropping out of fullscreen.
-- **Smooth** — with keyboard, mouse or gamepad the rows move with GPU `transform`s; on touch they switch to native scrolling with `scroll-snap`. Only the focused poster and its immediate neighbours have their full-size images preloaded
+  Inside the lightbox, `←` / `→` (or the D-pad) step through the current filter's posters. In fullscreen, Chrome/Edge use the Keyboard Lock API so `Esc` closes the lightbox first instead of dropping out of fullscreen.
+- **Fast with hundreds of posters** — cards start with the grid thumbnail and an `IntersectionObserver` swaps in the full-size poster for the visible rows plus the next two; off-screen cards use `content-visibility: auto`; only `transform` and `opacity` animate, and reduced motion turns the motion off
 
 ### Needs Fix (metadata review)
 - **⚠ nav button with a live count** of poster files without a solid match (the badge hides at 0). Opens a slide-in drawer on desktop, a full-screen sheet on phones
 - **Checked per poster file**, not per stack: no match / not found, match confidence below 85%, missing year, rating or plot, and **Mismatched stacks** — posters that stack together but resolved to different titles or IDs, or where some matched and some didn't (grouped, with a *Mismatch* tag)
-- **Tabs** — All · Not Found · Low Confidence · Missing Fields · Mismatched Stacks · Ignored. Each row shows the thumbnail (click → lightbox), filename, display title, and what it matched (title, year, provider, confidence) — or the closest rejected guess with a one-click **Use this**
+- **Ambiguous titles** — when a filename has no year and OMDb has several strong same-title matches from different years (remakes and reboots: *Resident Evil* 2002 / 2026, *Dune* 1984 / 2021), nothing is guessed. The **Ambiguous** tab shows the candidates side by side with their official posters, ratings and vote counts; click the right one to save it as a manual override (whole stack by default), without renaming the file. One candidate with 20× the votes of the next is picked automatically — unless another candidate is from this year or last year, since new releases have few votes yet
+- **Tabs** — All · Ambiguous · Not Found · Low Confidence · Missing Fields · Mismatched Stacks · Ignored. Each row shows the thumbnail (click → lightbox), filename, display title, and what it matched (title, year, provider, confidence) — or the closest rejected guess with a one-click **Use this**
 - **Fix match** — inline search prefilled with the cleaned filename title; pick **Auto / OMDb / AniList / Kitsu** and choose from the top 5 (poster, title, year, type, rating). You can also paste an IMDb ID (`tt1234567`), an AniList, Kitsu or MyAnimeList URL, or `anilist:123`
 - **Never renames files** — a fix is stored as a manual override in `metadata_overrides.json` (`{"<poster file>": {"source", "id"}}`). Overrides always win over auto-matching and are never retried, overwritten or flagged again. Optional **Also set display title**; **Apply to all posters in this stack** (on by default — untick it when variants are intentionally different, e.g. different seasons)
 - **Ignore** marks a poster as intentionally unmatched (fan art, custom posters); un-ignore it from the **Ignored** tab
 - Fixed rows animate out and the badge, grid cards and an open lightbox update without a reload. Rename and delete migrate / clean up overrides like they do watch status and ratings
+
+### Refresh Metadata (↻)
+- **↻ Refresh** in the nav (next to Needs Fix and Big Picture). A click runs a **Smart Refresh** of:
+  - posters added or modified since the last refresh (file times vs. the last refresh, kept in `refresh_state.json`)
+  - not-found titles (ignoring the 7-day negative cache)
+  - matches missing a year, rating or plot (new releases often start as N/A on OMDb)
+  - low-confidence (< 85%) and ambiguous matches
+  - older no-year matches that were never checked for remakes (up to 60 per refresh, to spare OMDb's free ~1,000 requests/day)
+- **Dropdown** — *Refresh new & unmatched* (same as a click) · *Refresh everything…* (re-checks every poster after a confirm showing the poster count and an estimated time) · *Refresh this stack/poster…* (then click a poster). The lightbox has its own **↻ Refresh** for the poster you're looking at
+- **Safe** — posters with a manual fix or *Ignore* are never touched, and hand edits (lightbox edits, renames) are never overwritten. A refresh never replaces good data with worse: a lower-confidence match or more N/A fields keep the old data
+- **Background job** — one lookup per movie (stack), with the providers' rate limits and circuit breakers. Only one job runs at a time; clicking again shows the running job. The button turns into a progress ring with **23 / 140**, grid cards update live as their metadata changes, and the end toast reads *12 updated · 3 still unmatched · 2 ambiguous* with **Open Needs Fix**
+- API: `POST /api/refresh {mode: smart|full|files, files}`, `GET /api/refresh/status` → `{total, done, updated, still_unmatched, ambiguous, running, …}`
 
 ### Fun Extras
 - **"What should I watch?"** — the 🎲 *Pick for me* button spins a slot-machine reel through your Want to Watch posters, decelerates, lands on a random pick (glowing in that poster's colour), then opens its lightbox. If Want to Watch is empty it picks from your unwatched posters instead. `Esc` cancels
@@ -77,7 +93,8 @@ Every poster is handpicked, converted to `.webp`, and laid out in a responsive g
 - **Installable (PWA)** — web app manifest + service worker (caches static assets only), so the site can be added to a phone home screen and opens full-screen (`display: standalone`)
 
 ### Poster Management
-- **Drag-and-Drop Upload** — "+ Add Poster" opens a modal; drop or browse any jpg/png/webp; non-webp images are auto-converted via Pillow and saved as `.webp`
+- **Drag-and-Drop Upload** — "+ Add Poster" opens a modal; drop or browse any jpg/png/webp; non-webp images are auto-converted via Pillow and saved as `.webp`. Each upload is looked up immediately (a refresh of just that poster)
+- **Optional Year on upload** — used to pick the right movie (e.g. a remake). It's saved as a year hint in `metadata_overrides.json` (`{"year_hint": "2026"}`); the file is **not** renamed. A name that's already taken gets a `(2)` counter, which the filename parser ignores
 - **Inline Title Rename** — pencil icon on card hover; renames the file on disk and migrates all associated metadata, watch status, rating, and collection in one step
 - **Delete Poster** — trash icon on card hover, or the "Delete poster" button in the lightbox; deletes the file, its thumbnail, and all associated state
 
@@ -158,6 +175,7 @@ MovieProject/
 ├── routes.py                # Blueprint: grid, routes, backfill, Needs Fix, all API endpoints
 ├── data.py                  # Filename parsing, metadata cache, overrides, lookup orchestration
 ├── providers.py             # OMDb / AniList / Kitsu / Jikan clients, circuit breakers, matching, ratings
+├── refresh.py               # ↻ Refresh jobs: smart / full / per-poster, no-downgrade merging
 ├── thumbs.py                # Grid thumbnail generation (also a CLI pre-builder)
 ├── build_cache.py           # CLI: prebuild metadata cache for all posters
 ├── rename_and_cache.py      # CLI: clean filenames + add (YYYY), rebuild cache
@@ -165,7 +183,8 @@ MovieProject/
 ├── backfill_poster_ids.py   # CLI: record stable OMDb/Jikan IDs per poster
 ├── omdb_cache.json          # Cached API responses (auto-updated, committed)
 ├── poster_ids.json          # Stable filename → OMDb/Jikan ID map (committed)
-├── metadata_overrides.json  # Needs Fix links, display titles, ignores (committed)
+├── metadata_overrides.json  # Needs Fix links, display titles, ignores, upload year hints (committed)
+├── refresh_state.json       # Time of the last metadata refresh  (local-only, git-ignored)
 ├── poster_zoom.json         # Per-poster lightbox zoom         (local-only, git-ignored)
 ├── watched.json             # Per-poster watch status          (local-only, git-ignored)
 ├── personal_ratings.json    # Per-poster star ratings (1–5)    (local-only, git-ignored)
