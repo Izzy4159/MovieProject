@@ -1316,6 +1316,8 @@ function openLightbox(imageSrc, element) {
         '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:-1px;margin-right:4px"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>' +
         'Link Metadata' +
       '</button>' +
+      '<button class="lb-link-meta-btn lb-refresh-btn" onclick="refreshStackOf(_lightboxGridItem)"' +
+        ' title="Look this poster (and its stack) up again">↻ Refresh</button>' +
     '</div>' +
     '<div class="lb-watch-row">' +
       '<button id="lb-btn-watched" class="lb-watch-btn' + (watchStatus === 'watched' ? ' lb-watch-active' : '') + '" onclick="_setWatchStatus(\'watched\')">\u2713 Watched</button>' +
@@ -2694,13 +2696,15 @@ function _applyLinkedMetadata(data) {
 const _fix = { data: null, tab: 'all', open: false, closeTimer: 0 };
 const _FIX_TABS = [
   { id: 'all',            label: 'All' },
+  { id: 'ambiguous',      label: 'Ambiguous' },
   { id: 'not_found',      label: 'Not Found' },
   { id: 'low_confidence', label: 'Low Confidence' },
   { id: 'missing',        label: 'Missing Fields' },
   { id: 'mismatch',       label: 'Mismatched Stacks' },
   { id: 'ignored',        label: 'Ignored' },
 ];
-const _FIX_TAGS = { not_found: 'Not found', low_confidence: 'Low confidence', missing: 'Missing', mismatch: 'Mismatch' };
+const _FIX_TAGS = { ambiguous: 'Ambiguous', not_found: 'Not found', low_confidence: 'Low confidence',
+                    missing: 'Missing', mismatch: 'Mismatch' };
 
 function _gridItemByFile(filename) {
   return document.querySelector('.grid-item[data-filename="' + CSS.escape(filename) + '"]');
@@ -2834,6 +2838,10 @@ function _fixThumb(filename) {
 }
 
 function _fixMatchLine(it) {
+  if (it.candidates) {
+    return '<span class="fix-k">Which one?</span> ' + it.candidates.length + ' titles share this name and the filename has no year' +
+      (it.match ? ' · showing ' + escHtml(it.match.title) + (it.match.year ? ' (' + escHtml(it.match.year) + ')' : '') + ' for now' : '');
+  }
   if (it.match) {
     const m = it.match;
     const conf = m.confidence != null ? Math.round(m.confidence * 100) + '%' : '';
@@ -2892,7 +2900,42 @@ function _fixRow(it) {
   info.querySelector('.fix-use-closest')?.addEventListener('click', function () {
     _fixLink(row, it, it.closest, { stack: it.stack.length > 1 });
   });
+  if (it.candidates && it.candidates.length) row.appendChild(_fixCandidates(row, it));
   return row;
+}
+
+/** Ambiguous title: the candidates side by side with their official posters — click the right one. */
+function _fixCandidates(row, it) {
+  const wrap = document.createElement('div');
+  wrap.className = 'fix-cands-wrap';
+  const multi = it.stack.length > 1;
+  if (multi) {
+    wrap.innerHTML = '<label class="fix-opt fix-cands-stack"><input type="checkbox" class="fix-stack" checked /> ' +
+      'Apply to all ' + it.stack.length + ' posters in this stack</label>';
+  }
+  const grid = document.createElement('div');
+  grid.className = 'fix-cands';
+  it.candidates.forEach(function (c) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'fix-cand';
+    const rating = c.rating ? (_RATING_LABELS[c.rating.source] || '') + ' ' + c.rating.value + '/' + c.rating.scale : '';
+    card.innerHTML =
+      (c.poster ? '<img class="fix-cand-img" alt="" referrerpolicy="no-referrer" src="' + escHtml(c.poster) + '" />'
+                : '<span class="fix-cand-img fix-result-noimg" aria-hidden="true"></span>') +
+      '<span class="fix-cand-title">' + escHtml(c.title) + '</span>' +
+      '<span class="fix-cand-year">' + escHtml(c.year || '') + (c.type ? ' · ' + escHtml(c.type) : '') + '</span>' +
+      '<span class="fix-cand-meta">' + escHtml(rating || 'no rating yet') +
+        (c.votes ? ' · ' + Number(c.votes).toLocaleString() + ' votes' : '') + '</span>';
+    card.setAttribute('aria-label', 'Use ' + c.title + ' (' + c.year + ')');
+    card.addEventListener('click', function () {
+      _fixLink(row, it, { source: 'omdb', id: c.imdbID, title: c.title + ' (' + c.year + ')' },
+               { stack: multi && !!wrap.querySelector('.fix-stack')?.checked });
+    });
+    grid.appendChild(card);
+  });
+  wrap.appendChild(grid);
+  return wrap;
 }
 
 function _fixIgnoredRow(it) {
@@ -3076,6 +3119,212 @@ async function _fixIgnore(files, ignore) {
   } catch (err) {
     showToast('Network error', 'error');
   }
+}
+
+// ── Metadata refresh (nav ↻, lightbox ↻, uploads) ─────────────────────────────
+// POST /api/refresh starts a background job (one at a time); we poll
+// /api/refresh/status, which also returns the posters whose metadata changed
+// since `since`, so cards update live.
+
+const _refresh = { timer: 0, since: 0, picking: false };
+
+/** Toast with a button (e.g. "Open Needs Fix"); stays a little longer than plain toasts. */
+function showActionToast(message, actionLabel, action, ms) {
+  const toast = document.createElement('div');
+  toast.className = 'steam-toast toast-action';
+  toast.setAttribute('role', 'status');
+  const text = document.createElement('span');
+  text.textContent = message;
+  toast.appendChild(text);
+  if (actionLabel) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toast-action-btn';
+    btn.textContent = actionLabel;
+    btn.addEventListener('click', function () { dismiss(); action(); });
+    toast.appendChild(btn);
+  }
+  document.body.appendChild(toast);
+  requestAnimationFrame(function () { requestAnimationFrame(function () { toast.classList.add('show'); }); });
+  const t = setTimeout(dismiss, ms || 9000);
+  function dismiss() {
+    clearTimeout(t);
+    toast.classList.remove('show');
+    setTimeout(function () { toast.remove(); }, 300);
+  }
+}
+
+function toggleRefreshMenu(force) {
+  const menu = document.getElementById('refresh-menu');
+  const btn  = document.getElementById('refresh-more');
+  if (!menu || !btn) return;
+  const open = typeof force === 'boolean' ? force : menu.hidden;
+  menu.hidden = !open;
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) menu.querySelector('button')?.focus();
+}
+
+async function startRefresh(mode, files) {
+  toggleRefreshMenu(false);
+  toggleNavMenu(false);
+  closeRefreshConfirm();
+  let st;
+  try {
+    const resp = await fetch('/api/refresh', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ mode: mode, files: files || [] }),
+    });
+    st = await resp.json();
+    if (!resp.ok) { showToast(st.error || 'Refresh failed', 'error'); return; }
+  } catch (err) {
+    showToast('Network error', 'error');
+    return;
+  }
+  if (st.already_running) {
+    showToast('A refresh is already running — ' + st.done + ' / ' + st.total);
+  } else if (!st.total && !st.running) {
+    showToast(st.skipped_manual
+      ? 'Nothing to refresh — manual fixes and ignored posters are never touched'
+      : 'Nothing needs a refresh right now');
+    return;
+  }
+  _refreshAttach(st, st.already_running ? st.seq : st.since);
+}
+
+function _refreshAttach(st, since) {
+  _refresh.since = since || 0;
+  _refreshRender(st);
+  clearInterval(_refresh.timer);
+  _refresh.timer = setInterval(_refreshPoll, 900);
+}
+
+async function _refreshPoll() {
+  let st;
+  try {
+    const resp = await fetch('/api/refresh/status?since=' + _refresh.since);
+    st = await resp.json();
+  } catch (_) { return; }               // try again next tick
+  Object.keys(st.posters || {}).forEach(function (f) {
+    _applyPosterMeta(_gridItemByFile(f), st.posters[f]);
+  });
+  _refresh.since = st.seq;
+  _refreshRender(st);
+  if (!st.running) {
+    clearInterval(_refresh.timer);
+    _refresh.timer = 0;
+    _refreshDone(st);
+  }
+}
+
+function _refreshRender(st) {
+  const btn   = document.getElementById('refresh-btn');
+  const prog  = document.getElementById('refresh-progress');
+  const label = document.getElementById('refresh-label');
+  const fill  = document.getElementById('refresh-ring-fill');
+  if (!btn) return;
+  const running = !!st.running;
+  btn.classList.toggle('running', running);
+  btn.setAttribute('aria-busy', running ? 'true' : 'false');
+  if (prog) {
+    prog.hidden = !running;
+    prog.textContent = st.done + ' / ' + st.total;
+  }
+  if (label) label.textContent = running ? 'Refreshing' : 'Refresh';
+  if (fill) {
+    const c = 2 * Math.PI * 10.5;
+    fill.style.strokeDasharray  = String(c);
+    fill.style.strokeDashoffset = String(c * (1 - (st.total ? st.done / st.total : 0)));
+  }
+  btn.title = running
+    ? 'Refreshing metadata: ' + st.done + ' / ' + st.total + ' movies' + (st.current ? ' — ' + st.current : '')
+    : 'Refresh metadata: new & unmatched posters';
+}
+
+function _refreshDone(st) {
+  refreshFixData();
+  if (!st.total) return;
+  const parts = [st.updated + ' updated', st.still_unmatched + ' still unmatched', st.ambiguous + ' ambiguous'];
+  const needsAttention = st.still_unmatched + st.ambiguous > 0;
+  showActionToast(parts.join(' · '), needsAttention ? 'Open Needs Fix' : '', function () {
+    if (st.ambiguous) _fix.tab = 'ambiguous';
+    openFixPanel();
+  });
+}
+
+/** Refresh the whole stack a grid card belongs to (one lookup per movie anyway). */
+function refreshStackOf(item) {
+  if (!item) return;
+  _syncStacks();
+  const files = _stackMembers(item).map(function (i) { return i.dataset.filename; }).filter(Boolean);
+  startRefresh('files', files);
+}
+
+function startRefreshPick() {
+  toggleRefreshMenu(false);
+  toggleNavMenu(false);
+  _refresh.picking = true;
+  document.body.classList.add('refresh-picking');
+  showToast('Click a poster to refresh it · Esc cancels');
+}
+
+function _endRefreshPick() {
+  _refresh.picking = false;
+  document.body.classList.remove('refresh-picking');
+}
+
+async function confirmFullRefresh() {
+  toggleRefreshMenu(false);
+  toggleNavMenu(false);
+  const modal = document.getElementById('refresh-confirm');
+  const body  = document.getElementById('refresh-confirm-body');
+  const go    = document.getElementById('refresh-confirm-go');
+  if (!modal) return;
+  body.textContent = 'Counting posters…';
+  go.disabled = true;
+  modal.classList.add('show');
+  try {
+    const est = await (await fetch('/api/refresh/estimate?mode=full')).json();
+    const mins = Math.max(1, Math.round(est.seconds / 60));
+    body.innerHTML =
+      '<p>Re-check <strong>' + est.posters + ' posters</strong> (' + est.movies + ' movies, one lookup each).</p>' +
+      '<p>Estimated time: <strong>about ' + mins + ' minute' + (mins === 1 ? '' : 's') + '</strong>. It runs in the background; you can keep browsing.</p>' +
+      '<p class="refresh-confirm-note">' + (est.skipped_manual ? est.skipped_manual + ' posters with a manual fix or Ignore are skipped. ' : '') +
+      'Existing good metadata is never replaced with worse data. OMDb’s free key allows about 1,000 requests a day.</p>';
+    go.disabled = false;
+    go.onclick = function () { startRefresh('full'); };
+    go.focus();
+  } catch (_) {
+    body.textContent = 'Could not count posters.';
+  }
+}
+
+function closeRefreshConfirm() {
+  document.getElementById('refresh-confirm')?.classList.remove('show');
+}
+
+function _initRefresh() {
+  // Pick mode: the next poster click refreshes its stack instead of opening it
+  document.addEventListener('click', function (e) {
+    if (!_refresh.picking) return;
+    if (e.target.closest('#nav-refresh')) return;
+    const item = e.target.closest('.grid-item');
+    e.preventDefault();
+    e.stopPropagation();
+    _endRefreshPick();
+    if (item) refreshStackOf(item);
+  }, true);
+  document.addEventListener('click', function (e) {
+    const menu = document.getElementById('refresh-menu');
+    if (menu && !menu.hidden && !e.target.closest('#nav-refresh')) toggleRefreshMenu(false);
+  });
+  document.getElementById('refresh-confirm')?.addEventListener('click', function (e) {
+    if (e.target === this) closeRefreshConfirm();
+  });
+  // A job may already be running (started in another tab, or before a reload)
+  fetch('/api/refresh/status').then(function (r) { return r.json(); }).then(function (st) {
+    if (st.running) _refreshAttach(st, st.seq);
+  }).catch(function () {});
 }
 
 // ── Theater mode (Steam Big Picture style) ────────────────────────────────────
@@ -4065,6 +4314,20 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
+    if (e.key === 'Escape' && _refresh.picking) {
+      _endRefreshPick();
+      showToast('Refresh cancelled');
+      return;
+    }
+    if (e.key === 'Escape' && !document.getElementById('refresh-menu')?.hidden) {
+      toggleRefreshMenu(false);
+      document.getElementById('refresh-more')?.focus();
+      return;
+    }
+    if (e.key === 'Escape' && document.getElementById('refresh-confirm')?.classList.contains('show')) {
+      closeRefreshConfirm();
+      return;
+    }
     if (e.key === 'Escape') {
       const modal    = document.getElementById('upload-modal');
       const dropdown = document.getElementById('recent-dropdown');
@@ -4115,6 +4378,7 @@ document.addEventListener('DOMContentLoaded', function () {
   _initLightboxSwipe();
   _thInit();
   _thInitSort();
+  _initRefresh();
   _initTilt();
   _refreshPosterColors();
 
@@ -4174,7 +4438,10 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
       addNewPosterToGrid(data.filename, data.title, data.year);
+      _applyPosterMeta(_gridItemByFile(data.filename), data.poster);
       closeUploadModal();
+      // The server is already looking the new poster up: follow along
+      if (data.refresh && !_refresh.timer) _refreshAttach(data.refresh, data.refresh.seq);
     } catch (err) {
       alert('Network error: ' + err.message);
       btn.disabled    = false;

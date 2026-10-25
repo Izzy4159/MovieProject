@@ -46,6 +46,7 @@ class Provider:
         self._last         = 0.0
         self._fails        = 0
         self._open_until   = 0.0
+        self.calls         = 0                    # requests made this session (for logs)
 
     def available(self) -> bool:
         return time.monotonic() >= self._open_until
@@ -64,6 +65,7 @@ class Provider:
                 wait = self._last + self._min_interval - time.monotonic()
                 if wait > 0:
                     time.sleep(wait)
+                self.calls += 1
                 try:
                     resp = self.session.request(method, url, timeout=TIMEOUT, **kw)
                 except (requests.ConnectionError, requests.Timeout) as e:
@@ -460,6 +462,68 @@ def omdb_lookup(title: str, year, api_key: str) -> tuple[dict | None, dict | Non
             best = ({"title": r.get("Title"), "year": r.get("Year"), "source": "omdb",
                      "id": r.get("imdbID")}, score)
     return None, _guess(best)
+
+
+AMBIGUOUS_TITLE = 0.95     # "same title" for remakes / reboots
+DOMINANT_VOTES  = 20       # one candidate with 20× the IMDb votes of the next is the obvious one
+
+
+def _votes(d: dict) -> int:
+    try:
+        return int(str(d.get("imdbVotes") or "0").replace(",", ""))
+    except ValueError:
+        return 0
+
+
+def omdb_ambiguity(title: str, api_key: str) -> dict:
+    """
+    For a title WITHOUT a year: are there several strong same-title matches
+    from different years (Resident Evil 2002 / 2026)?
+
+    {"status": "clear"}                                    one title, nothing to decide
+    {"status": "dominant", "entry": {...}}                 one is overwhelmingly the famous one
+    {"status": "ambiguous", "candidates": [{title, year, imdbID, poster, type, rating, votes}]}
+    """
+    results = {}
+    for v in query_variants(title)[:2]:
+        d = _omdb_get({"s": v}, api_key)
+        for r in (d.get("Search") or []):
+            if (r.get("Type") in _OMDB_TYPES and r.get("imdbID")
+                    and score_match(title, None, [r.get("Title")], None) >= AMBIGUOUS_TITLE):
+                results.setdefault(r["imdbID"], r)
+        if d.get("Search"):          # one search is enough when it returned anything
+            break
+    # Search ranks by popularity, so a brand-new remake (no votes yet) is buried
+    # under the older title: ask for this year's titles explicitly
+    this_year = time.localtime().tm_year
+    d = _omdb_get({"s": query_variants(title)[0], "y": this_year}, api_key)
+    for r in (d.get("Search") or []):
+        if (r.get("Type") in _OMDB_TYPES and r.get("imdbID")
+                and score_match(title, None, [r.get("Title")], None) >= AMBIGUOUS_TITLE):
+            results.setdefault(r["imdbID"], r)
+    years = sorted({year_range(r.get("Year"))[0] for r in results.values()} - {None})
+    if len(results) < 2 or not years or years[-1] - years[0] < 2:
+        return {"status": "clear"}
+
+    cands = []
+    for r in list(results.values())[:4]:
+        full = _omdb_get({"i": r["imdbID"], "plot": "short"}, api_key)
+        if full:
+            e = _omdb_entry(full)
+            e["votes"] = _votes(full)
+            cands.append(e)
+    cands.sort(key=lambda e: -e["votes"])
+    if len(cands) < 2:
+        return {"status": "clear"}
+    top, second = cands[0], cands[1]
+    # A new release has few votes yet, so votes can't rule it out: if any other
+    # candidate is from this year or last year, let the user decide
+    recent = any((year_range(c["year"])[0] or 0) >= this_year - 1 for c in cands[1:])
+    if not recent and top["votes"] >= DOMINANT_VOTES * max(second["votes"], 1):
+        return {"status": "dominant", "entry": top}
+    return {"status": "ambiguous", "candidates": [
+        {"title": c["title"], "year": c["year"], "imdbID": c["id"], "poster": c.get("poster"),
+         "type": c.get("type"), "rating": c.get("rating"), "votes": c["votes"]} for c in cands]}
 
 
 def omdb_search(query: str, year, api_key: str) -> list[dict]:

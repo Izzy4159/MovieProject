@@ -198,23 +198,35 @@ _migrate_cache()
 
 def is_found(e) -> bool:
     return (isinstance(e, dict) and not e.get("not_found") and bool(e.get("title"))
-            and e.get("source") not in PLACEHOLDER_SOURCES)
+            and bool(e.get("source")) and e.get("source") not in PLACEHOLDER_SOURCES)
+
+
+def is_unresolved(e) -> bool:
+    """A cached "no match": not found, or ambiguous with nothing chosen yet."""
+    return isinstance(e, dict) and not is_found(e) and bool(e.get("not_found") or e.get("ambiguous"))
 
 
 def negative_is_fresh(e) -> bool:
-    return (isinstance(e, dict) and bool(e.get("not_found"))
-            and time.time() - float(e.get("checked") or 0) < NEGATIVE_TTL)
+    return is_unresolved(e) and time.time() - float(e.get("checked") or 0) < NEGATIVE_TTL
+
+
+def is_manual(ov) -> bool:
+    """A Needs Fix link or Ignore — never refreshed, overwritten or flagged."""
+    return bool(ov) and (bool(ov.get("source") and ov.get("id")) or bool(ov.get("ignore")))
 
 
 def resolve(filename: str) -> dict:
     """Everything the UI needs to know about one poster file's metadata."""
     stem = os.path.splitext(filename)[0]
     title_guess, year = parse_poster_filename(stem)
-    key = norm_key(title_guess, year)
     ov  = overrides.get(filename) or {}
+    # Upload "Year" field: a matching hint stored in the overrides, the file isn't renamed
+    year = year or (str(ov["year_hint"]) if ov.get("year_hint") else None)
+    key = norm_key(title_guess, year)
     res = {"filename": filename, "title_guess": title_guess, "year_guess": year, "key": key,
-           "override": ov, "ignored": bool(ov.get("ignore")),
-           "entry": None, "origin": None, "negative": None, "placeholder": None}
+           "override": ov, "ignored": bool(ov.get("ignore")), "manual": is_manual(ov),
+           "entry": None, "origin": None, "negative": None, "placeholder": None,
+           "ambiguous": None}
 
     if ov.get("source") and ov.get("id"):
         e = cache.get(id_key(ov["source"], ov["id"]))
@@ -229,10 +241,14 @@ def resolve(filename: str) -> dict:
         elif is_found(ke):
             res["entry"], res["origin"] = ke, res["origin"] or "key"
         else:
-            if isinstance(ke, dict) and ke.get("not_found"):
+            if is_unresolved(ke):
                 res["negative"] = ke
             if isinstance(fe, dict) and fe.get("source") in PLACEHOLDER_SOURCES:
                 res["placeholder"] = fe
+    if res["origin"] != "override":
+        amb = res["entry"] if (res["entry"] or {}).get("ambiguous") else res["negative"]
+        if amb and amb.get("ambiguous"):
+            res["ambiguous"] = amb.get("candidates") or []
     return res
 
 
@@ -354,6 +370,8 @@ def _do_lookup(title: str, year: str | None, id_hints=()) -> dict | None:
             e.pop("_alt", None)
             if score >= P.ACCEPT_SCORE:
                 e.update(confidence=score, checked=int(time.time()))
+                if src == "omdb" and not year:
+                    return _check_ambiguous(title, e, q, " via stored ID")
                 print(f"[Metadata] {q} → {_label(e)} via stored ID", flush=True)
                 return e
 
@@ -373,6 +391,8 @@ def _do_lookup(title: str, year: str | None, id_hints=()) -> dict | None:
             return None
         if e:
             e["checked"] = int(time.time())
+            if not y:
+                return _check_ambiguous(t, e, q)
             print(f"[Metadata] {q} → {_label(e)}", flush=True)
             return e
         if g and (not guess or g["confidence"] > guess["confidence"]):
@@ -395,6 +415,102 @@ def _do_lookup(title: str, year: str | None, id_hints=()) -> dict | None:
     print(f"[Metadata] not found: {q}{hint} — not retrying for 7 days", flush=True)
     return {"not_found": True, "checked": int(time.time()), "title": title,
             "year": year or "N/A", "best_guess": best}
+
+
+def _check_ambiguous(title: str, e: dict, q: str, via: str = "") -> dict | None:
+    """
+    An OMDb match found WITHOUT a year: don't guess between remakes. Returns the
+    match, the overwhelmingly famous candidate, or an ambiguous record for the
+    Needs Fix panel. None if OMDb couldn't answer the check.
+    """
+    try:
+        amb = P.omdb_ambiguity(title, OMDB_API_KEY)
+    except ProviderError:
+        return None
+    now = int(time.time())
+    if amb["status"] == "ambiguous":
+        c = amb["candidates"]
+        print(f"[Metadata] ambiguous: {q} — " +
+              ", ".join(f"{x['title']} ({x['year']})" for x in c) + " → Needs Fix", flush=True)
+        return {"ambiguous": True, "candidates": c, "checked": now, "title": title, "year": "N/A"}
+    if amb["status"] == "dominant" and amb["entry"]["id"] != e.get("id"):
+        top = amb["entry"]
+        top.pop("votes", None)
+        top["confidence"] = P.score_match(title, None, [top["title"]], top["year"])
+        e = top
+    e.update(checked=now, ambiguity_checked=True)
+    print(f"[Metadata] {q} → {_label(e)}{via}", flush=True)
+    return e
+
+
+# --------- Refresh support ---------
+
+def _fields(e: dict) -> int:
+    return sum(1 for ok in (e.get("year") not in (None, "", "N/A"),
+                            isinstance(e.get("rating"), dict),
+                            bool(e.get("plot"))) if ok)
+
+
+def entry_confidence(e: dict, title: str, year) -> float:
+    if e.get("source") in MANUAL_SOURCES or e.get("manual"):
+        return 1.0
+    if isinstance(e.get("confidence"), (int, float)):
+        return float(e["confidence"])
+    return P.score_match(title, year, [e.get("title")], e.get("year"))
+
+
+def merge_refresh(old, new, title: str, year) -> tuple[dict | None, str]:
+    """
+    Decide what a refresh stores. Never replaces good data with worse data.
+    Returns (entry to store or None for "leave as is", outcome) where outcome is
+    one of "updated", "kept", "ambiguous", "unmatched", "unknown".
+    """
+    if new is None:                                       # no provider could answer
+        return None, ("kept" if is_found(old) else "unknown")
+    if new.get("ambiguous") and not is_found(new):
+        if is_found(old) and old.get("source") not in MANUAL_SOURCES:
+            # Keep showing what we had, but stop presenting it as certain
+            kept = dict(old, ambiguous=True, candidates=new["candidates"], checked=new["checked"])
+            return kept, "ambiguous"
+        return new, "ambiguous"
+    if not is_found(new):                                 # not found this time
+        if is_found(old):
+            return None, "kept"
+        return new, "unmatched"
+    if not is_found(old):
+        return new, "updated"
+    qo = (round(entry_confidence(old, title, year), 3), _fields(old))
+    qn = (round(entry_confidence(new, title, year), 3), _fields(new))
+    if qn[0] < qo[0] or qn[1] < qo[1]:
+        return None, "kept"                               # refresh found something worse
+    same = all(old.get(k) == new.get(k) for k in ("title", "year", "rating", "plot", "id"))
+    return new, ("kept" if same and not old.get("ambiguous") else "updated")
+
+
+def fetch_fresh(title: str, year: str | None, key: str, id_hints=()) -> dict | None:
+    """Look a movie up now, ignoring the negative cache and the once-per-session
+    rule, WITHOUT storing the result (the refresh decides what to keep)."""
+    while True:
+        with _flight_lock:
+            ev = _inflight.get(key)
+            if ev is None:
+                ev = _inflight[key] = threading.Event()
+                _attempted.add(key)
+                break
+        ev.wait(120)                 # backfill is fetching it right now
+    try:
+        return _do_lookup(title, year, id_hints)
+    finally:
+        with _flight_lock:
+            _inflight.pop(key, None)
+        ev.set()
+
+
+def recheck_ambiguity(title: str, e: dict) -> dict | None:
+    """Ambiguity check for an existing no-year match (made before the check existed)."""
+    q = f"'{title}'"
+    new = _check_ambiguous(title, dict(e), q, " (ambiguity check)")
+    return new
 
 
 def fetch_by_id(source: str, pid: str) -> dict | None:

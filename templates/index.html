@@ -125,6 +125,42 @@
         <span class="nav-btn-label">Needs Fix</span>
         <span class="fix-badge" id="fix-badge" hidden></span>
       </button>
+      <div class="nav-refresh" id="nav-refresh">
+        <button class="nav-icon-btn nav-refresh-btn" id="refresh-btn" onclick="startRefresh('smart')"
+                title="Refresh metadata: new &amp; unmatched posters" aria-label="Refresh metadata">
+          <span class="refresh-glyph" aria-hidden="true">
+            <svg class="refresh-ring" width="22" height="22" viewBox="0 0 24 24">
+              <circle class="refresh-ring-track" cx="12" cy="12" r="10.5"/>
+              <circle class="refresh-ring-fill" id="refresh-ring-fill" cx="12" cy="12" r="10.5"/>
+            </svg>
+            <svg class="refresh-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/>
+            </svg>
+          </span>
+          <span class="nav-btn-label" id="refresh-label">Refresh</span>
+          <span class="refresh-progress" id="refresh-progress" hidden></span>
+        </button>
+        <button class="nav-icon-btn nav-refresh-more" id="refresh-more" onclick="toggleRefreshMenu()"
+                aria-haspopup="menu" aria-expanded="false" aria-controls="refresh-menu" aria-label="More refresh options">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+               stroke-linecap="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="refresh-menu" id="refresh-menu" role="menu" aria-label="Refresh metadata" hidden>
+          <button type="button" role="menuitem" onclick="startRefresh('smart')">
+            <span class="rm-title">Refresh new &amp; unmatched</span>
+            <span class="rm-sub">New or changed posters, not found, missing fields, low confidence, ambiguous</span>
+          </button>
+          <button type="button" role="menuitem" onclick="confirmFullRefresh()">
+            <span class="rm-title">Refresh everything…</span>
+            <span class="rm-sub">Re-check every poster (manual fixes are never touched)</span>
+          </button>
+          <button type="button" role="menuitem" onclick="startRefreshPick()">
+            <span class="rm-title">Refresh this stack/poster…</span>
+            <span class="rm-sub">Then click a poster</span>
+          </button>
+        </div>
+      </div>
       <button class="nav-icon-btn nav-spin-btn" id="spin-btn" onclick="openSpin()"
               title="What should I watch?" aria-label="What should I watch?">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -293,8 +329,8 @@
             <input type="text" id="upload-title" placeholder="e.g. Inception" required />
           </label>
           <label class="form-label">
-            Year <span class="form-hint">optional</span>
-            <input type="text" id="upload-year" placeholder="e.g. 2010" maxlength="4" />
+            Year <span class="form-hint">optional · helps pick the right movie, the file isn't renamed</span>
+            <input type="text" id="upload-year" placeholder="e.g. 2010" maxlength="4" inputmode="numeric" pattern="(18|19|20)[0-9]{2}" />
           </label>
         </div>
         <div class="form-actions">
@@ -315,6 +351,23 @@
         <button class="modal-x" onclick="closeLinkModal()" aria-label="Close">×</button>
       </div>
       <div id="link-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       REFRESH EVERYTHING — confirm with poster count + time estimate
+  ══════════════════════════════════════════════════════ -->
+  <div id="refresh-confirm" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="refresh-confirm-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title" id="refresh-confirm-title">Refresh everything?</h2>
+        <button class="modal-x" onclick="closeRefreshConfirm()" aria-label="Close">×</button>
+      </div>
+      <div class="refresh-confirm-body" id="refresh-confirm-body">Counting posters…</div>
+      <div class="form-actions refresh-confirm-actions">
+        <button type="button" class="btn-ghost" onclick="closeRefreshConfirm()">Cancel</button>
+        <button type="button" class="btn-steam-primary" id="refresh-confirm-go" disabled>Refresh everything</button>
+      </div>
     </div>
   </div>
 

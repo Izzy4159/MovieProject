@@ -2,6 +2,7 @@ import os, json, time, re, threading
 from urllib.parse import quote
 from flask import Blueprint, send_from_directory, render_template, request, jsonify, url_for
 import providers as P
+import refresh as R
 from providers import ProviderError
 from data import (lookup, resolve, display, needs_lookup, parse_poster_filename,
                   id_key, is_found, fetch_by_id, search_candidates, parse_id_input,
@@ -101,6 +102,8 @@ def _get_grid_mtimes():
     t2 = os.path.getmtime(CACHE_PATH)  if os.path.exists(CACHE_PATH)  else 0.0
     t3 = os.path.getmtime(OVERRIDES_PATH) if os.path.exists(OVERRIDES_PATH) else 0.0
     return t1, max(t2, t3)
+
+R.set_on_change(lambda: _GRID_CACHE.update(html=''))
 
 _BACKFILL = {"running": False}
 
@@ -413,6 +416,8 @@ def rename_poster():
         "year":   year or old_entry.get("year") or "N/A",
         "source": old_entry.get("source") or "unknown",
     })
+    if old_res["entry"]:
+        old_entry["edited"] = True     # typed by hand: a refresh never overwrites it
     CACHE[new_filename] = old_entry
     _save_cache(CACHE)
     _GRID_CACHE['html'] = ''
@@ -477,17 +482,23 @@ def upload_poster():
     if not safe_title:
         return jsonify(error="Invalid title"), 400
 
-    stem     = f"{safe_title} ({year})" if year else safe_title
+    if year and not re.fullmatch(r"(?:18|19|20)\d\d", year):
+        return jsonify(error="Year must be 4 digits"), 400
+
+    # The Year field is a matching hint (saved in metadata_overrides.json); it
+    # doesn't go into the filename
+    stem     = safe_title
     filename = stem + ".webp"
     save_path = _safe_poster_path(filename)
     if not save_path:
         return jsonify(error="Invalid filename"), 400
 
-    # Deduplicate: append counter suffix if name already taken
+    # Deduplicate with a "(2)" counter — the filename parser ignores it, so the
+    # copy still shares its movie's metadata
     if os.path.exists(save_path):
         counter = 2
         while True:
-            filename  = f"{stem} {counter}.webp"
+            filename  = f"{stem} ({counter}).webp"
             save_path = _safe_poster_path(filename)
             if save_path and not os.path.exists(save_path):
                 break
@@ -516,9 +527,15 @@ def upload_poster():
     }
     CACHE[filename] = new_entry
     _save_cache(CACHE)
+    if year:
+        OVERRIDES[filename] = {"year_hint": year}
+        save_overrides()
     _GRID_CACHE['html'] = ''
 
-    return jsonify(filename=filename, title=safe_title, year=year or "N/A")
+    # Look the new poster up right away (joins a running refresh if there is one)
+    job = R.start_upload([filename])
+    return jsonify(filename=filename, title=safe_title, year=year or "N/A",
+                   poster=_poster_meta(filename), refresh=job)
 
 
 @main_bp.route("/delete_poster", methods=["DELETE"])
@@ -655,6 +672,7 @@ def update_metadata():
     })
     if not res["entry"]:
         updated["source"] = "manual"
+    updated["edited"] = True           # typed by hand: a refresh never overwrites it
 
     CACHE[filename] = updated
     _save_cache(CACHE)
@@ -938,7 +956,7 @@ def _compute_needs_fix():
         files = [m["fn"] for m in members]
         # Mismatch: auto-matched variants that resolved to different titles (or to
         # different IDs at the same provider), or some matched and some not
-        auto    = [m for m in members if not m["res"]["override"]]
+        auto    = [m for m in members if not m["res"]["manual"]]
         matched = [m for m in auto if m["res"]["entry"]]
         works   = {(P.match_form(m["res"]["entry"].get("title")), P.year_range(m["res"]["entry"].get("year"))[0])
                    for m in matched}
@@ -954,11 +972,13 @@ def _compute_needs_fix():
             if ov.get("ignore"):
                 ignored.append({"filename": m["fn"], "title": d["title"], "stack": files})
                 continue
-            if ov:                        # manual fix: never flagged again
+            if res["manual"]:             # manual fix: never flagged again
                 continue
             reasons = []
             e = res["entry"]
-            if not e:
+            if res["ambiguous"] is not None:
+                reasons.append("ambiguous")
+            elif not e:
                 reasons.append("not_found")
             else:
                 if d["confidence"] is not None and d["confidence"] < P.LOW_CONF:
@@ -985,6 +1005,7 @@ def _compute_needs_fix():
                 "match": ({"title": e.get("title"), "year": d["year"], "source": d["source"],
                            "id": d["id"], "confidence": d["confidence"]} if e else None),
                 "closest":  neg.get("best_guess"),
+                "candidates": res["ambiguous"],
                 "stack":    files,
                 "stack_id": ci,
             })
@@ -1048,7 +1069,7 @@ def fix_match():
         return jsonify(error=f"No {P.PROVIDER_LABELS.get(source, source)} record {pid}"), 404
 
     for f in files:
-        ov = {k: v for k, v in (OVERRIDES.get(f) or {}).items() if k == "display_title"}
+        ov = {k: v for k, v in (OVERRIDES.get(f) or {}).items() if k in ("display_title", "year_hint")}
         ov.update({"source": source, "id": str(entry["id"])})
         if dtitle:
             ov["display_title"] = dtitle
@@ -1072,7 +1093,7 @@ def fix_ignore():
     for f in files:
         ov = dict(OVERRIDES.get(f) or {})
         if ignore:
-            ov = {k: v for k, v in ov.items() if k == "display_title"}
+            ov = {k: v for k, v in ov.items() if k in ("display_title", "year_hint")}
             ov["ignore"] = True
         else:
             ov.pop("ignore", None)
@@ -1084,3 +1105,46 @@ def fix_ignore():
     _GRID_CACHE["html"] = ""
     nf = _compute_needs_fix()
     return jsonify(ok=True, posters={f: _poster_meta(f) for f in files}, count=nf["count"])
+
+
+# ── Metadata refresh (nav ↻ button, lightbox ↻, uploads) ───────────────────────
+
+def _refresh_payload(st: dict) -> dict:
+    st = dict(st)
+    st["posters"] = {fn: _poster_meta(fn) for fn in st.pop("changed", []) if _safe_poster_path(fn)
+                     and os.path.isfile(_safe_poster_path(fn))}
+    return st
+
+
+@main_bp.route("/api/refresh", methods=["POST"])
+def api_refresh():
+    """Start a refresh job. Body: {mode: smart|full|files, files?: [...]}. A running job is reported, not restarted."""
+    body  = request.get_json(silent=True) or {}
+    mode  = (body.get("mode") or "smart").strip().lower()
+    if mode not in ("smart", "full", "files"):
+        return jsonify(error="mode must be smart, full or files"), 400
+    files = _valid_targets(body.get("files")) if mode == "files" else None
+    if mode == "files" and not files:
+        return jsonify(error="No posters given"), 400
+    since = R.status()["seq"]
+    st = R.start(mode, files)
+    st["since"] = since
+    return jsonify(_refresh_payload(dict(st, changed=[])))
+
+
+@main_bp.route("/api/refresh/status")
+def api_refresh_status():
+    """{total, done, updated, still_unmatched, ambiguous, running, seq, posters: {changed since `since`}}."""
+    try:
+        since = int(request.args.get("since", 0))
+    except ValueError:
+        since = 0
+    return jsonify(_refresh_payload(R.status(since)))
+
+
+@main_bp.route("/api/refresh/estimate")
+def api_refresh_estimate():
+    mode = (request.args.get("mode") or "full").strip().lower()
+    if mode not in ("smart", "full"):
+        return jsonify(error="mode must be smart or full"), 400
+    return jsonify(R.estimate(mode))

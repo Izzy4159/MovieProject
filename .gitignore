@@ -33,3 +33,6 @@ posters/thumbs/
 backfill_log.txt
 
 # omdb_cache.json is intentionally committed — the live site needs it.
+
+# Metadata refresh bookkeeping (last refresh time)
+refresh_state.json
