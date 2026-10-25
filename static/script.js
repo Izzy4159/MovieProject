@@ -2620,6 +2620,398 @@ function _applyLinkedMetadata(data) {
   }
 }
 
+// ── Needs Fix panel ───────────────────────────────────────────────────────────
+// Lists every poster FILE without a solid match (/needs_fix). Fixing links the
+// poster to an exact provider record via metadata_overrides.json — the file on
+// disk is never renamed.
+
+const _fix = { data: null, tab: 'all', open: false, closeTimer: 0 };
+const _FIX_TABS = [
+  { id: 'all',            label: 'All' },
+  { id: 'not_found',      label: 'Not Found' },
+  { id: 'low_confidence', label: 'Low Confidence' },
+  { id: 'missing',        label: 'Missing Fields' },
+  { id: 'mismatch',       label: 'Mismatched Stacks' },
+  { id: 'ignored',        label: 'Ignored' },
+];
+const _FIX_TAGS = { not_found: 'Not found', low_confidence: 'Low confidence', missing: 'Missing', mismatch: 'Mismatch' };
+
+function _gridItemByFile(filename) {
+  return document.querySelector('.grid-item[data-filename="' + CSS.escape(filename) + '"]');
+}
+
+function _setFixBadge(n) {
+  const badge = document.getElementById('fix-badge');
+  const btn   = document.getElementById('fix-btn');
+  if (badge) { badge.hidden = !n; badge.textContent = n ? String(n) : ''; }
+  if (btn) btn.title = n ? n + ' poster' + (n === 1 ? '' : 's') + ' need a metadata fix' : 'Needs Fix: all posters matched';
+}
+
+async function refreshFixData() {
+  try {
+    const resp = await fetch('/needs_fix');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    _fix.data = await resp.json();
+  } catch (err) {
+    if (_fix.open && !_fix.data) {
+      document.getElementById('fix-list').innerHTML = '<p class="fix-empty">Could not load: ' + escHtml(err.message) + '</p>';
+    }
+    return;
+  }
+  _setFixBadge(_fix.data.count);
+  if (_fix.open) _fixRender();
+}
+
+function openFixPanel() {
+  const panel = document.getElementById('fix-panel');
+  if (!panel) return;
+  toggleNavMenu(false);
+  clearTimeout(_fix.closeTimer);
+  _fix.open = true;
+  panel.hidden = false;
+  void panel.offsetWidth;                 // start the slide-in from the closed state
+  panel.classList.add('open');
+  document.body.classList.add('fix-open');
+  if (_fix.data) _fixRender();
+  else document.getElementById('fix-list').innerHTML = '<p class="fix-empty">Loading…</p>';
+  refreshFixData();
+  setTimeout(function () { document.getElementById('fix-close')?.focus(); }, 50);
+}
+
+function closeFixPanel() {
+  const panel = document.getElementById('fix-panel');
+  if (!panel || !_fix.open) return;
+  _fix.open = false;
+  panel.classList.remove('open');
+  document.body.classList.remove('fix-open');
+  _fix.closeTimer = setTimeout(function () { panel.hidden = true; }, _reducedMotion() ? 0 : 320);
+}
+
+function _fixItemsForTab(tab) {
+  const d = _fix.data || { items: [], ignored: [] };
+  if (tab === 'ignored') return d.ignored;
+  if (tab === 'all') return d.items;
+  return d.items.filter(function (it) { return it.reasons.indexOf(tab) >= 0; });
+}
+
+function _fixRender() {
+  const tabsEl = document.getElementById('fix-tabs');
+  const list   = document.getElementById('fix-list');
+  if (!tabsEl || !list || !_fix.data) return;
+
+  // Keep any editor that's open (and its search results) across re-renders
+  const openFile = list.querySelector('.fix-row.editing')?.dataset.file;
+
+  tabsEl.innerHTML = '';
+  _FIX_TABS.forEach(function (t) {
+    const n   = _fixItemsForTab(t.id).length;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'fix-tab' + (t.id === _fix.tab ? ' active' : '');
+    btn.setAttribute('role', 'tab');
+    btn.setAttribute('aria-selected', t.id === _fix.tab ? 'true' : 'false');
+    btn.innerHTML = escHtml(t.label) + '<span class="fix-tab-n">' + n + '</span>';
+    btn.addEventListener('click', function () { _fix.tab = t.id; _fixRender(); list.scrollTop = 0; });
+    tabsEl.appendChild(btn);
+  });
+
+  const items = _fixItemsForTab(_fix.tab);
+  const keep  = openFile ? list.querySelector('.fix-row[data-file="' + CSS.escape(openFile) + '"]') : null;
+  list.innerHTML = '';
+  if (!items.length) {
+    list.innerHTML = '<p class="fix-empty">' + (_fix.tab === 'ignored'
+      ? 'No ignored posters.' : '✓ Nothing to fix here.') + '</p>';
+    return;
+  }
+
+  if (_fix.tab === 'mismatch') {
+    // Group by stack so the disagreeing variants sit together
+    const groups = new Map();
+    items.forEach(function (it) {
+      if (!groups.has(it.stack_id)) groups.set(it.stack_id, []);
+      groups.get(it.stack_id).push(it);
+    });
+    groups.forEach(function (members) {
+      const g = document.createElement('section');
+      g.className = 'fix-group';
+      g.innerHTML = '<h3 class="fix-group-title"><span class="fix-tag tag-mismatch">Mismatch</span>' +
+        escHtml(members[0].title) + '<span class="fix-group-n">' + members[0].stack.length + ' posters</span></h3>';
+      members.forEach(function (it) { g.appendChild(_fixRow(it)); });
+      list.appendChild(g);
+    });
+  } else if (_fix.tab === 'ignored') {
+    items.forEach(function (it) { list.appendChild(_fixIgnoredRow(it)); });
+  } else {
+    items.forEach(function (it) { list.appendChild(_fixRow(it)); });
+  }
+
+  if (keep) {
+    const fresh = list.querySelector('.fix-row[data-file="' + CSS.escape(openFile) + '"]');
+    if (fresh) fresh.replaceWith(keep);
+  }
+}
+
+function _fixThumb(filename) {
+  const img = document.createElement('img');
+  img.className = 'fix-thumb';
+  img.src = _thumbUrl(filename);
+  img.alt = '';
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  img.title = 'Open poster';
+  img.addEventListener('click', function () {
+    const gi  = _gridItemByFile(filename);
+    const gim = gi?.querySelector('img');
+    if (gim) openLightbox(gim.src, gim);
+  });
+  return img;
+}
+
+function _fixMatchLine(it) {
+  if (it.match) {
+    const m = it.match;
+    const conf = m.confidence != null ? Math.round(m.confidence * 100) + '%' : '';
+    return '<span class="fix-k">Matched</span> ' + escHtml(m.title) +
+      (m.year && m.year !== 'N/A' ? ' (' + escHtml(m.year) + ')' : '') +
+      ' · ' + escHtml(_PROVIDER_LABELS[m.source] || m.source || '?') +
+      (conf ? ' · <span class="fix-conf' + (m.confidence < 0.85 ? ' low' : '') + '">' + conf + '</span>' : '');
+  }
+  if (it.pending) return '<span class="fix-k">No match yet</span> lookup pending';
+  let s = '<span class="fix-k">No match</span>';
+  if (it.closest) {
+    const c = it.closest;
+    s += ' · closest: ' + escHtml(c.title) + (c.year ? ' (' + escHtml(c.year) + ')' : '') +
+      ' · ' + escHtml(_PROVIDER_LABELS[c.source] || c.source) + ' · ' + Math.round(c.confidence * 100) + '%' +
+      ' <button type="button" class="fix-use-closest">Use this</button>';
+  }
+  return s;
+}
+
+function _fixRow(it) {
+  const row = document.createElement('div');
+  row.className = 'fix-row';
+  row.dataset.file = it.filename;
+  row.appendChild(_fixThumb(it.filename));
+
+  const info = document.createElement('div');
+  info.className = 'fix-info';
+  const tags = it.reasons.map(function (r) {
+    const label = r === 'missing' ? 'Missing: ' + it.missing.join(', ') : _FIX_TAGS[r];
+    return '<span class="fix-tag tag-' + r + '">' + escHtml(label) + '</span>';
+  }).join('');
+  info.innerHTML =
+    '<div class="fix-name">' + escHtml(it.title) + '</div>' +
+    '<div class="fix-file" title="' + escHtml(it.filename) + '">' + escHtml(it.filename) + '</div>' +
+    '<div class="fix-match">' + _fixMatchLine(it) + '</div>' +
+    '<div class="fix-tags">' + tags + '</div>';
+  row.appendChild(info);
+
+  const actions = document.createElement('div');
+  actions.className = 'fix-actions';
+  const fixBtn = document.createElement('button');
+  fixBtn.type = 'button';
+  fixBtn.className = 'fix-btn-primary';
+  fixBtn.textContent = 'Fix match';
+  fixBtn.addEventListener('click', function () { _fixToggleEditor(row, it); });
+  const ignBtn = document.createElement('button');
+  ignBtn.type = 'button';
+  ignBtn.className = 'fix-btn-ghost';
+  ignBtn.textContent = 'Ignore';
+  ignBtn.title = 'Intentionally unmatched (fan art, custom poster)';
+  ignBtn.addEventListener('click', function () { _fixIgnore([it.filename], true); });
+  actions.appendChild(fixBtn);
+  actions.appendChild(ignBtn);
+  row.appendChild(actions);
+
+  info.querySelector('.fix-use-closest')?.addEventListener('click', function () {
+    _fixLink(row, it, it.closest, { stack: it.stack.length > 1 });
+  });
+  return row;
+}
+
+function _fixIgnoredRow(it) {
+  const row = document.createElement('div');
+  row.className = 'fix-row';
+  row.dataset.file = it.filename;
+  row.appendChild(_fixThumb(it.filename));
+  const info = document.createElement('div');
+  info.className = 'fix-info';
+  info.innerHTML = '<div class="fix-name">' + escHtml(it.title) + '</div>' +
+    '<div class="fix-file">' + escHtml(it.filename) + '</div>';
+  row.appendChild(info);
+  const actions = document.createElement('div');
+  actions.className = 'fix-actions';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'fix-btn-ghost';
+  btn.textContent = 'Un-ignore';
+  btn.addEventListener('click', function () { _fixIgnore([it.filename], false); });
+  actions.appendChild(btn);
+  row.appendChild(actions);
+  return row;
+}
+
+function _fixToggleEditor(row, it) {
+  const open = row.querySelector('.fix-editor');
+  if (open) { open.remove(); row.classList.remove('editing'); return; }
+  row.classList.add('editing');
+  const multi = it.stack.length > 1;
+  const ed = document.createElement('div');
+  ed.className = 'fix-editor';
+  ed.innerHTML =
+    '<form class="fix-search-row">' +
+      '<input class="fix-q" type="text" autocomplete="off" spellcheck="false"' +
+      ' placeholder="Title, IMDb ID (tt…), AniList or Kitsu URL" aria-label="Search for the correct title" />' +
+      '<select class="fix-provider" aria-label="Provider">' +
+        '<option value="auto">Auto</option><option value="omdb">OMDb</option>' +
+        '<option value="anilist">AniList</option><option value="kitsu">Kitsu</option>' +
+      '</select>' +
+      '<button type="submit" class="fix-btn-primary">Search</button>' +
+    '</form>' +
+    '<div class="fix-opts">' +
+      (multi
+        ? '<label class="fix-opt"><input type="checkbox" class="fix-stack" checked /> Apply to all ' +
+          it.stack.length + ' posters in this stack</label>'
+        : '') +
+      '<label class="fix-opt"><input type="checkbox" class="fix-settitle" /> Also set display title</label>' +
+      '<input class="fix-title-input" type="text" disabled aria-label="Display title" />' +
+    '</div>' +
+    '<div class="fix-results"></div>';
+  row.appendChild(ed);
+
+  const q = ed.querySelector('.fix-q');
+  q.value = it.query || it.title;
+  const titleIn = ed.querySelector('.fix-title-input');
+  titleIn.value = it.title;
+  ed.querySelector('.fix-settitle').addEventListener('change', function () {
+    titleIn.disabled = !this.checked;
+    if (this.checked) titleIn.focus();
+  });
+  ed.querySelector('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    _fixSearch(row, it);
+  });
+  ed.querySelector('.fix-provider').addEventListener('change', function () { _fixSearch(row, it); });
+  _fixSearch(row, it);
+  q.focus();
+  q.select();
+}
+
+async function _fixSearch(row, it) {
+  const ed  = row.querySelector('.fix-editor');
+  if (!ed) return;
+  const out = ed.querySelector('.fix-results');
+  const q   = ed.querySelector('.fix-q').value.trim();
+  const provider = ed.querySelector('.fix-provider').value;
+  if (!q) { out.innerHTML = ''; return; }
+  const token = (ed._token || 0) + 1;
+  ed._token = token;
+  out.innerHTML = '<p class="fix-searching">Searching…</p>';
+  let data;
+  try {
+    const params = new URLSearchParams({ q: q, provider: provider, year: it.year || '' });
+    const resp = await fetch('/fix_search?' + params);
+    data = await resp.json();
+  } catch (err) {
+    data = { results: [], errors: ['Network error'] };
+  }
+  if (ed._token !== token) return;          // a newer search started meanwhile
+  out.innerHTML = '';
+  (data.errors || []).forEach(function (msg) {
+    const p = document.createElement('p');
+    p.className = 'fix-error';
+    p.textContent = msg;
+    out.appendChild(p);
+  });
+  if (!(data.results || []).length) {
+    if (!(data.errors || []).length) out.insertAdjacentHTML('beforeend', '<p class="fix-searching">No results. Try another spelling, provider, or paste an ID.</p>');
+    return;
+  }
+  data.results.forEach(function (c) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'fix-result';
+    const meta = [c.year && c.year !== 'N/A' ? c.year : '', c.type || '', c.rating_label || '']
+      .filter(Boolean).map(escHtml).join(' · ');
+    card.innerHTML =
+      (c.poster ? '<img class="fix-result-img" alt="" referrerpolicy="no-referrer" src="' + escHtml(c.poster) + '" />'
+                : '<span class="fix-result-img fix-result-noimg" aria-hidden="true"></span>') +
+      '<span class="fix-result-body">' +
+        '<span class="fix-result-title">' + escHtml(c.title || '') + '</span>' +
+        '<span class="fix-result-meta">' + meta + '</span>' +
+        '<span class="fix-result-src">' + escHtml(_PROVIDER_LABELS[c.source] || c.source) +
+          (c.score != null ? ' · ' + Math.round(c.score * 100) + '% match' : '') + '</span>' +
+      '</span>';
+    card.addEventListener('click', function () {
+      _fixLink(row, it, c, { stack: !!ed.querySelector('.fix-stack')?.checked });
+    });
+    out.appendChild(card);
+  });
+}
+
+/** Animate rows out of the list, then drop them. */
+function _fixRemoveRows(files) {
+  const rows = Array.from(document.querySelectorAll('#fix-list .fix-row'))
+    .filter(function (r) { return files.indexOf(r.dataset.file) >= 0; });
+  return Promise.all(rows.map(function (r) {
+    if (_reducedMotion() || !r.animate) { r.remove(); return Promise.resolve(); }
+    const h = r.offsetHeight;
+    r.style.overflow = 'hidden';
+    return r.animate([
+      { height: h + 'px', opacity: 1, transform: 'none' },
+      { height: h + 'px', opacity: 0, transform: 'translateX(40px)', offset: 0.55 },
+      { height: '0px', opacity: 0, transform: 'translateX(40px)', paddingTop: '0px', paddingBottom: '0px', marginTop: '0px', marginBottom: '0px' },
+    ], { duration: 380, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' })
+      .finished.then(function () { r.remove(); }, function () { r.remove(); });
+  }));
+}
+
+async function _fixAfterChange(data, files) {
+  Object.keys(data.posters || {}).forEach(function (f) { _applyPosterMeta(_gridItemByFile(f), data.posters[f]); });
+  _setFixBadge(data.count);
+  await _fixRemoveRows(files);
+  await refreshFixData();                   // siblings' mismatch tags may have cleared too
+}
+
+async function _fixLink(row, it, cand, opts) {
+  if (!cand || !cand.source || !cand.id) return;
+  const ed    = row.querySelector('.fix-editor');
+  const files = opts.stack ? it.stack.slice() : [it.filename];
+  const setTitle = ed?.querySelector('.fix-settitle')?.checked;
+  const display  = setTitle ? (ed.querySelector('.fix-title-input').value.trim() || cand.title) : '';
+  row.classList.add('busy');
+  try {
+    const resp = await fetch('/fix_match', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ files: files, source: cand.source, id: cand.id, display_title: display }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) { showToast(data.error || 'Fix failed', 'error'); row.classList.remove('busy'); return; }
+    showToast('✓ ' + files.length + ' poster' + (files.length === 1 ? '' : 's') + ' linked to ' + cand.title);
+    await _fixAfterChange(data, files);
+  } catch (err) {
+    showToast('Network error', 'error');
+    row.classList.remove('busy');
+  }
+}
+
+async function _fixIgnore(files, ignore) {
+  try {
+    const resp = await fetch('/fix_ignore', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ files: files, ignore: ignore }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) { showToast(data.error || 'Failed', 'error'); return; }
+    showToast(ignore ? 'Ignored — find it under the Ignored tab' : 'Back in the Needs Fix list');
+    await _fixAfterChange(data, files);
+  } catch (err) {
+    showToast('Network error', 'error');
+  }
+}
+
 // ── Theater mode (Steam Big Picture style) ────────────────────────────────────
 //
 // Rows are built from the grid's data-* attributes plus /recently_added.
@@ -3478,6 +3870,8 @@ document.addEventListener('DOMContentLoaded', function () {
         toggleNavMenu(false);
       } else if (document.getElementById('lightbox')?.classList.contains('show')) {
         closeLightbox();
+      } else if (_fix.open) {
+        closeFixPanel();
       } else if (_theater.active) {
         exitTheater();
       }
@@ -3488,6 +3882,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const lbOpen = document.getElementById('lightbox')?.classList.contains('show');
     const modalOpen = document.querySelector('.modal-overlay.show');
     if (modalOpen) return;
+    if (_fix.open && !lbOpen) return;
 
     if ((e.key === 'b' || e.key === 'B') && !e.ctrlKey && !e.metaKey && !e.altKey && !lbOpen) {
       e.preventDefault();
@@ -3574,6 +3969,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Stack Duplicates (restores the saved mode before the first layout)
   _initStacks();
+
+  // Needs Fix badge — refreshed again whenever the tab comes back into view,
+  // since background lookups can finish after the page loaded
+  setTimeout(refreshFixData, 600);
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && !_fix.open) refreshFixData();
+  });
 
   // Initialize first page
   changePage(0);

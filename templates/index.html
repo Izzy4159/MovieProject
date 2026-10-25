@@ -115,6 +115,16 @@
         </svg>
         <span class="nav-btn-label">Theater</span>
       </button>
+      <button class="nav-icon-btn nav-fix-btn" id="fix-btn" onclick="openFixPanel()"
+              title="Needs Fix: posters without a solid metadata match" aria-label="Needs Fix">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span class="nav-btn-label">Needs Fix</span>
+        <span class="fix-badge" id="fix-badge" hidden></span>
+      </button>
       <button class="nav-icon-btn nav-spin-btn" id="spin-btn" onclick="openSpin()"
               title="What should I watch?" aria-label="What should I watch?">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -292,6 +302,24 @@
       </div>
       <div id="link-modal-body"></div>
     </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       NEEDS FIX — posters without a solid metadata match (drawer / mobile sheet)
+  ══════════════════════════════════════════════════════ -->
+  <div id="fix-panel" class="fix-panel" hidden>
+    <div class="fix-backdrop" onclick="closeFixPanel()"></div>
+    <aside class="fix-drawer" role="dialog" aria-modal="true" aria-labelledby="fix-title">
+      <header class="fix-head">
+        <div>
+          <h2 class="fix-title" id="fix-title">Needs Fix</h2>
+          <p class="fix-sub" id="fix-sub">Posters without a solid metadata match. Fixes never rename files.</p>
+        </div>
+        <button class="modal-x" id="fix-close" onclick="closeFixPanel()" aria-label="Close">×</button>
+      </header>
+      <div class="fix-tabs" id="fix-tabs" role="tablist" aria-label="Filter"></div>
+      <div class="fix-list" id="fix-list"></div>
+    </aside>
   </div>
 
   <!-- ══════════════════════════════════════════════════════
