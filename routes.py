@@ -1,7 +1,12 @@
 import os, json, time, re, threading
 from urllib.parse import quote
 from flask import Blueprint, send_from_directory, render_template, request, jsonify, url_for
-from data import get_movie_info, parse_filename, norm_key, is_variant_token, cache as data_cache
+import providers as P
+from providers import ProviderError
+from data import (lookup, resolve, display, needs_lookup, parse_poster_filename,
+                  id_key, is_found, fetch_by_id, search_candidates, parse_id_input,
+                  save_cache, save_overrides, poster_ids, overrides as OVERRIDES,
+                  cache as data_cache)
 from thumbs import (ensure_thumb, remove_thumb, rename_thumb, THUMBS_DIR,
                     get_color, compute_color, all_colors)
 
@@ -10,40 +15,22 @@ main_bp = Blueprint("main", __name__)
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
 POSTERS_DIR = os.path.join(BASE_DIR, "posters")
 CACHE_PATH   = os.path.join(BASE_DIR, "omdb_cache.json")
+OVERRIDES_PATH = os.path.join(BASE_DIR, "metadata_overrides.json")
 WATCHED_PATH = os.path.join(BASE_DIR, "watched.json")
 RATINGS_PATH = os.path.join(BASE_DIR, "personal_ratings.json")
 
 ITEMS_PER_PAGE       = 50
-BACKFILL_PER_REQUEST  = 8
 COLLECTIONS_PATH     = os.path.join(BASE_DIR, "collections.json")
 ZOOM_PATH            = os.path.join(BASE_DIR, "poster_zoom.json")
 STACK_COVERS_PATH    = os.path.join(BASE_DIR, "stack_covers.json")
 
-# Regex: valid year paren — exactly 4 digits starting with 19 or 20
-_YEAR_PAT    = re.compile(r'\(((?:19|20)\d{2})\)')
-# Any parenthetical group (used to strip non-year parens like (2), (3))
-_NONYR_PAREN = re.compile(r'\([^)]*\)')
-
-# In-memory grid HTML cache — keyed by folder + omdb_cache.json mtimes
+# In-memory grid HTML cache — keyed by folder + omdb_cache.json + overrides mtimes
 _GRID_CACHE = {'html': '', 'mtime_posters': -1.0, 'mtime_cache': -1.0}
 
 # ── JSON helpers ──────────────────────────────────────────────────────────────
 
-def _load_cache():
-    if os.path.exists(CACHE_PATH):
-        try:
-            with open(CACHE_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return {}
-    return {}
-
-def _save_cache(cache: dict):
-    try:
-        with open(CACHE_PATH, "w", encoding="utf-8") as f:
-            json.dump(cache, f, indent=2, ensure_ascii=False)
-    except Exception as e:
-        print(f"[CACHE WRITE ERROR] {e}")
+def _save_cache(_cache=None):
+    save_cache()
 
 def _load_watched():
     if os.path.exists(WATCHED_PATH):
@@ -104,50 +91,39 @@ def _safe_poster_path(filename: str):
 
 # ── In-memory cache (populated at startup) ────────────────────────────────────
 
-# Share data.py's dict: two separate copies each rewrote omdb_cache.json in full,
-# so whichever saved last silently dropped the other's backfill results.
+# The one shared metadata dict (data.cache) — every writer saves through data.save_cache
 CACHE = data_cache
-CACHE.update(_load_cache())
 
 # ── Utilities ─────────────────────────────────────────────────────────────────
 
 def _get_grid_mtimes():
     t1 = os.path.getmtime(POSTERS_DIR) if os.path.isdir(POSTERS_DIR) else 0.0
     t2 = os.path.getmtime(CACHE_PATH)  if os.path.exists(CACHE_PATH)  else 0.0
-    return t1, t2
+    t3 = os.path.getmtime(OVERRIDES_PATH) if os.path.exists(OVERRIDES_PATH) else 0.0
+    return t1, max(t2, t3)
 
 _BACKFILL = {"running": False}
 
-def _run_backfill(misses):
-    """Background thread: fetch OMDb data for up to BACKFILL_PER_REQUEST misses."""
+def _run_backfill(jobs):
+    """Background thread: one lookup per movie (cache key), however many variant posters share it."""
     try:
-        _backfill_batch(misses)
+        done = 0
+        for kind, key, title, year, hints in jobs:
+            if kind == "id":
+                src, pid = hints
+                try:
+                    entry = fetch_by_id(src, pid)
+                except (ProviderError, ValueError):
+                    entry = None
+            else:
+                entry = lookup(title, year, id_hints=hints, cache_key=key)
+            if entry is not None:
+                done += 1
+                _GRID_CACHE['html'] = ''   # next page load shows the new metadata
+        if jobs:
+            print(f"[BACKFILL] {len(jobs)} lookups finished ({done} answered)")
     finally:
         _BACKFILL["running"] = False
-
-def _backfill_batch(misses):
-    updated = 0
-    for poster_fn, title_guess, year, relookup in misses[:BACKFILL_PER_REQUEST]:
-        # Pass filename so data.get_movie_info can check poster_ids/manual_overrides first
-        info = get_movie_info(title_guess, year=year, filename=poster_fn)
-        if not info and relookup and isinstance(CACHE.get(poster_fn), dict):
-            # Keep the stale upload entry but store the cleaned title and stop retrying
-            CACHE[poster_fn]["title"] = title_guess
-            CACHE[poster_fn]["relookup_done"] = True
-            updated += 1
-        elif info:
-            CACHE[poster_fn] = {
-                "title":  info.get("title")  or title_guess,
-                "year":   info.get("year")   or year or "N/A",
-                "rating": info.get("rating") or "N/A",
-                "plot":   info.get("plot")   or "No plot available",
-                "source": info.get("source") or "unknown",
-            }
-            updated += 1
-            time.sleep(0.2)
-    if updated:
-        _save_cache(CACHE)
-        _GRID_CACHE['html'] = ''  # invalidate so next request regenerates with new data
 
 _COLOR_BACKFILL = {"running": False}
 
@@ -172,76 +148,39 @@ def html_escape(s) -> str:
         .replace(">", "&gt;")
     )
 
-def _lookup_cache(filename: str, title_guess: str, year):
-    """Try filename key first (new system), fall back to norm_key (legacy)."""
-    info = CACHE.get(filename)
-    if info:
-        return info
-    return CACHE.get(norm_key(title_guess, year))
+_parse_poster_filename = parse_poster_filename
 
-# Sources whose cached title was copied from the filename rather than a real lookup
-_FILENAME_SOURCES = ("uploaded", "unknown")
 
-def _clean_title(title: str) -> str:
-    """Strip (2)/(3) counters and variant tokens (ver2, xlg, v2 …) from a title string."""
-    name  = _NONYR_PAREN.sub('', str(title or ''))
-    parts = name.replace('_', ' ').split()
-    return ' '.join(w for w in parts if not is_variant_token(w)).strip()
+def _poster_files() -> list[str]:
+    names = []
+    if os.path.isdir(POSTERS_DIR):
+        with os.scandir(POSTERS_DIR) as it:
+            names = [e.name for e in it if e.is_file() and e.name.lower().endswith(".webp")]
+    return sorted(names, key=str.lower)
 
-def _display_title(info, title_guess: str) -> str:
-    """Title to show for a poster. Filename-derived cache titles get variant tags stripped."""
-    if not info:
-        return title_guess
-    title = info.get("title") or title_guess
-    if info.get("source") in _FILENAME_SOURCES:
-        title = _clean_title(title) or title_guess
-    return title
 
-def _needs_relookup(info) -> bool:
-    """Cached from the filename (upload / failed backfill) with no year → worth a real lookup."""
-    return (isinstance(info, dict)
-            and info.get("source") in _FILENAME_SOURCES
-            and str(info.get("year") or "N/A") == "N/A"
-            and not info.get("relookup_done"))
+def _poster_meta(filename: str, res: dict | None = None) -> dict:
+    """Metadata fields for one poster file, as rendered into the grid's data-* attributes."""
+    res = res or resolve(filename)
+    d   = display(res)
+    r   = d["rating"]
+    return {
+        "title":       d["title"],
+        "year":        d["year"],
+        "rating":      str(r["value"]) if r else "N/A",
+        "ratingScale": str(r["scale"]) if r else "",
+        "ratingSrc":   r["source"] if r else "",
+        "ratingNorm":  str(P.rating_norm(r)) if r else "",
+        "plot":        d["plot"],
+        "metaSrc":     d["source"] if res.get("entry") else "",
+        "metaConf":    f"{d['confidence']:.2f}" if d["confidence"] is not None else "",
+    }
 
-def _parse_poster_filename(base_name: str):
-    """
-    Return (display_title, year_or_None) for a poster filename stem.
 
-    Rules vs data.parse_filename:
-    - A parenthetical is a YEAR only if it is exactly 4 digits starting with
-      19 or 20.  Anything else — (2), (3), (#4), etc. — is stripped entirely.
-    - A bare 4-digit number is never a year: "1917", "1984", "2046 xlg" keep
-      it as the title.  "1917 (2019)" -> ("1917", "2019").
-    - Everything AFTER the first valid year parenthetical is DISCARDED so that
-      variant tags ("v2", "xlg", "#4") and duplicate year suffixes never bleed
-      into the display title.
-    - Same ignore-word set as data.parse_filename (ver, xlg, poster, intl, cover).
-
-    Examples
-    --------
-    "2 Fast 2 Furious (2)"               -> ("2 Fast 2 Furious", None)
-    "28 Years Later (2025) v2 (2025)"    -> ("28 Years Later", "2025")
-    "28 Years Later (2025) #4 (2025)"    -> ("28 Years Later", "2025")
-    "mortal kombat 2 (2026) xlg (2026)"  -> ("mortal kombat 2", "2026")
-    "no country for old men ver4 (2007)" -> ("no country for old men", "2007")
-    "Alien (1979)"                       -> ("Alien", "1979")
-    "1917 (3)"                           -> ("1917", None)
-    """
-    ym   = _YEAR_PAT.search(base_name)
-    year = ym.group(1) if ym else None
-
-    # Keep only text BEFORE the first year paren — drops variant suffixes
-    name = base_name[:ym.start()].rstrip() if ym else base_name
-
-    # Strip any remaining non-year parentheticals, e.g. (2), (3)
-    name = _NONYR_PAREN.sub('', name)
-
-    # Replicate data.parse_filename cleanup
-    parts   = name.replace('_', ' ').replace('-', ' ').split()
-    cleaned = [w for w in parts if not is_variant_token(w)]
-    title   = ' '.join(cleaned).strip()
-    return title, year
+_META_ATTRS = (("title", "data-title"), ("year", "data-year"), ("rating", "data-rating"),
+               ("ratingScale", "data-rating-scale"), ("ratingSrc", "data-rating-src"),
+               ("ratingNorm", "data-rating-norm"), ("plot", "data-plot"),
+               ("metaSrc", "data-meta-src"), ("metaConf", "data-meta-conf"))
 
 # ── Collections helpers ───────────────────────────────────────────────────────
 
@@ -309,34 +248,27 @@ def generate_grid_items():
     collections = _load_collections()
     zooms       = _load_zoom()
 
-    poster_files = []
-    if os.path.isdir(POSTERS_DIR):
-        with os.scandir(POSTERS_DIR) as it:
-            for e in it:
-                if e.is_file() and e.name.lower().endswith(".webp"):
-                    poster_files.append(e.name)
-    poster_files.sort(key=str.lower)
+    poster_files = _poster_files()
 
     grid_items = []
-    misses = []  # (poster_filename, title_guess, year, relookup)
+    jobs = {}    # one lookup per movie key (or per overridden id), however many variants
     color_misses = []
 
     for i, poster in enumerate(poster_files):
-        base_name          = os.path.splitext(poster)[0]
-        # Use our stricter parser — strips (2)/(3) parens and variant suffixes
-        title_guess, year  = _parse_poster_filename(base_name)
-
-        info = _lookup_cache(poster, title_guess, year)
-        if info:
-            title  = _display_title(info, title_guess)
-            yr     = info.get("year")   or year or "N/A"
-            rating = info.get("rating") if info.get("rating") not in (None, "N/A") else "N/A"
-            plot   = info.get("plot")   or "No plot available"
-            if _needs_relookup(info):
-                misses.append((poster, title_guess, year, True))
-        else:
-            title, yr, rating, plot = title_guess, year or "N/A", "N/A", "No plot available"
-            misses.append((poster, title_guess, year, False))
+        base_name = os.path.splitext(poster)[0]
+        res  = resolve(poster)
+        meta = _poster_meta(poster, res)
+        if needs_lookup(res):
+            ov = res["override"]
+            if res["origin"] == "override-missing":
+                k = id_key(ov["source"], ov["id"])
+                jobs.setdefault(k, ("id", k, None, None, (ov["source"], ov["id"])))
+            else:
+                job  = jobs.setdefault(res["key"], ("title", res["key"], res["title_guess"],
+                                                     res["year_guess"], []))
+                pid = poster_ids.get(poster) or {}
+                if pid.get("source") and pid.get("id") and (pid["source"], pid["id"]) not in job[4]:
+                    job[4].append((pid["source"], str(pid["id"])))
 
         watch_status    = watched.get(poster, "")
         personal_rating = int(ratings.get(poster, 0))
@@ -348,10 +280,10 @@ def generate_grid_items():
         page = i // ITEMS_PER_PAGE + 1
 
         style = "display:none;" + (f"--pc:{color};" if color else "")
+        meta_attrs = "".join(f' {attr}="{html_escape(meta[k])}"' for k, attr in _META_ATTRS)
         item_html = (
             f'<div class="grid-item page-{page}" style="{style}"'
-            f' data-title="{html_escape(title)}" data-year="{html_escape(yr)}"'
-            f' data-rating="{html_escape(rating)}" data-plot="{html_escape(plot)}"'
+            f'{meta_attrs}'
             f' data-filename="{html_escape(poster)}"'
             f' data-watched="{html_escape(watch_status)}"'
             f' data-personal-rating="{personal_rating}"'
@@ -370,16 +302,17 @@ def generate_grid_items():
     html = "\n".join(grid_items)
     _GRID_CACHE.update({'html': html, 'mtime_posters': t1, 'mtime_cache': t2})
 
-    # Fire backfill in a daemon thread — does not block the response
-    # One batch at a time — the next page load after it finishes queues the rest
-    if misses and not _BACKFILL["running"]:
+    # Fire backfill in a daemon thread — does not block the response. Every
+    # movie is queried at most once per session (data.lookup), so the queue drains.
+    jobs = list(jobs.values())
+    if jobs and not _BACKFILL["running"]:
         _BACKFILL["running"] = True
-        threading.Thread(target=_run_backfill, args=(misses,), daemon=True).start()
+        threading.Thread(target=_run_backfill, args=(jobs,), daemon=True).start()
     if color_misses and not _COLOR_BACKFILL["running"]:
         _COLOR_BACKFILL["running"] = True
         threading.Thread(target=_run_color_backfill, args=(color_misses,), daemon=True).start()
 
-    print(f"[FAST] grid in {time.time()-start_time:.2f}s ({len(misses)} queued for backfill)")
+    print(f"[FAST] grid in {time.time()-start_time:.2f}s ({len(jobs)} movies queued for lookup)")
     return html
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -469,24 +402,24 @@ def rename_poster():
         os.rename(old_path, new_path)
         rename_thumb(old_filename, new_filename)
 
-    # Move cache entry: filename key preferred; also clear any legacy norm_key entry
-    old_title_g, old_yr = _parse_poster_filename(os.path.splitext(old_filename)[0])
-    old_norm   = norm_key(old_title_g, old_yr)
-    old_entry  = CACHE.pop(old_filename, None) or CACHE.pop(old_norm, {})
-    data_cache.pop(old_filename, None)
-    data_cache.pop(old_norm,     None)
-
-    new_entry = {
+    # Per-file entry for the new name, carrying over the metadata this poster showed.
+    # The shared per-movie entry stays: other variant posters still use it.
+    old_res   = resolve(old_filename)
+    old_entry = dict(old_res["entry"] or old_res["placeholder"] or {})
+    CACHE.pop(old_filename, None)
+    old_entry.pop("not_found", None)
+    old_entry.update({
         "title":  safe_title,
         "year":   year or old_entry.get("year") or "N/A",
-        "rating": old_entry.get("rating") or "N/A",
-        "plot":   old_entry.get("plot")   or "No plot available",
         "source": old_entry.get("source") or "unknown",
-    }
-    CACHE[new_filename]      = new_entry
-    data_cache[new_filename] = new_entry
+    })
+    CACHE[new_filename] = old_entry
     _save_cache(CACHE)
     _GRID_CACHE['html'] = ''
+
+    if old_filename in OVERRIDES:
+        OVERRIDES[new_filename] = OVERRIDES.pop(old_filename)
+        save_overrides()
 
     # Migrate watched + personal-rating + collection entries to the new filename
     watched = _load_watched()
@@ -577,12 +510,11 @@ def upload_poster():
     new_entry = {
         "title":  safe_title,
         "year":   year or "N/A",
-        "rating": "N/A",
-        "plot":   "No plot available",
+        "rating": None,
+        "plot":   None,
         "source": "uploaded",
     }
-    CACHE[filename]      = new_entry
-    data_cache[filename] = new_entry
+    CACHE[filename] = new_entry
     _save_cache(CACHE)
     _GRID_CACHE['html'] = ''
 
@@ -604,14 +536,12 @@ def delete_poster():
     remove_thumb(filename)
     _GRID_CACHE['html'] = ''
 
-    # Remove from both caches (filename key + legacy norm_key)
-    title_g, yr = _parse_poster_filename(os.path.splitext(filename)[0])
-    old_norm = norm_key(title_g, yr)
-    CACHE.pop(filename, None)
-    CACHE.pop(old_norm, None)
-    data_cache.pop(filename, None)
-    data_cache.pop(old_norm, None)
-    _save_cache(CACHE)
+    # Drop the per-file entry and override. The shared per-movie entry stays:
+    # other variant posters (or a re-added poster) still use it.
+    if CACHE.pop(filename, None) is not None:
+        _save_cache(CACHE)
+    if OVERRIDES.pop(filename, None) is not None:
+        save_overrides()
 
     # Remove watched + rating + collection state
     watched = _load_watched()
@@ -712,28 +642,26 @@ def update_metadata():
     if not path or not os.path.isfile(path):
         return jsonify(error="Poster not found"), 404
 
-    title_g, yr  = _parse_poster_filename(os.path.splitext(filename)[0])
-    old_norm     = norm_key(title_g, yr)
-    existing     = CACHE.get(filename) or CACHE.get(old_norm) or {}
+    # Edits become this file's own entry; the shared per-movie entry is left alone
+    res     = resolve(filename)
+    shown   = display(res)
+    updated = dict(res["entry"] or {})
+    updated.update({
+        "title":  new_title or shown["title"],
+        "year":   new_year  or shown["year"] or "N/A",
+        "rating": updated.get("rating"),
+        "plot":   new_plot  or updated.get("plot"),
+        "source": updated.get("source") or "manual",
+    })
+    if not res["entry"]:
+        updated["source"] = "manual"
 
-    updated = {
-        "title":  new_title or existing.get("title")  or title_g,
-        "year":   new_year  or existing.get("year")   or "N/A",
-        "rating": existing.get("rating") or "N/A",
-        "plot":   new_plot  or existing.get("plot")   or "No plot available",
-        "source": existing.get("source") or "manual",
-    }
-
-    CACHE[filename]      = updated
-    data_cache[filename] = updated
-    # Remove stale legacy norm_key entry if it was separate
-    if old_norm in CACHE and old_norm != filename:
-        CACHE.pop(old_norm, None)
-        data_cache.pop(old_norm, None)
+    CACHE[filename] = updated
     _save_cache(CACHE)
     _GRID_CACHE['html'] = ''
 
-    return jsonify(title=updated["title"], year=updated["year"], plot=updated["plot"])
+    return jsonify(title=updated["title"], year=updated["year"],
+                   plot=updated["plot"] or "No plot available")
 
 
 @main_bp.route("/set_collection", methods=["POST"])
@@ -777,10 +705,8 @@ def collection_groups():
     colls  = _load_collections()
     groups = set(colls.values())
     for entry in CACHE.values():
-        if isinstance(entry, dict):
-            t = entry.get("title")
-            if t:
-                groups.add(t)
+        if is_found(entry):
+            groups.add(entry["title"])
     return jsonify(sorted(groups, key=str.lower))
 
 
@@ -798,10 +724,9 @@ def _compute_stats():
 
     decades, unique = {}, set()
     for fn in posters:
-        title_guess, year = _parse_poster_filename(os.path.splitext(fn)[0])
-        info  = _lookup_cache(fn, title_guess, year) or {}
-        title = (_display_title(info, title_guess) or "").strip().lower()
-        m     = re.search(r"(1[89]\d\d|20\d\d)", str(info.get("year") or year or ""))
+        d     = display(resolve(fn))
+        title = (d["title"] or "").strip().lower()
+        m     = re.search(r"(1[89]\d\d|20\d\d)", str(d["year"] or ""))
         yr    = int(m.group(1)) if m else None
         unique.add((title, yr))
         key = f"{yr // 10 * 10}s" if yr else "Unknown"
@@ -865,14 +790,11 @@ def recently_added():
                     mtime = e.stat().st_mtime
                 except OSError:
                     mtime = 0.0
-                title_guess, year = _parse_poster_filename(os.path.splitext(e.name)[0])
-                info  = _lookup_cache(e.name, title_guess, year)
-                title = _display_title(info, title_guess)
-                yr    = (info or {}).get("year")  or year or "N/A"
+                d = display(resolve(e.name))
                 entries.append({
                     "filename": e.name,
-                    "title":    title,
-                    "year":     yr,
+                    "title":    d["title"],
+                    "year":     d["year"],
                     "mtime":    mtime,
                 })
 
@@ -919,19 +841,17 @@ def cache_entries():
     """
     seen = {}  # (title_lower, year) -> entry dict
     for key, entry in CACHE.items():
-        if not isinstance(entry, dict):
+        if not is_found(entry):
             continue
         title = str(entry.get("title") or "").strip()
         year  = str(entry.get("year")  or "").strip()
-        if not title:
-            continue
         dedup = (title.lower(), year)
         if dedup not in seen:
             seen[dedup] = {
                 "key":    key,
                 "title":  title,
                 "year":   year,
-                "rating": entry.get("rating") or "N/A",
+                "rating": P.rating_label(entry.get("rating")) or "N/A",
                 "plot":   entry.get("plot")   or "",
             }
 
@@ -943,49 +863,223 @@ def cache_entries():
 @main_bp.route("/link_metadata", methods=["POST"])
 def link_metadata():
     """
-    Write a full metadata payload to omdb_cache.json under the poster's filename key.
-    Accepts: { filename, title, year, rating, plot }
+    Copy an existing cache entry onto this poster (per-file "linked" entry).
+    Accepts: { filename, key } — or the older { filename, title, year, plot }.
     """
     body     = request.get_json(silent=True) or {}
     filename = (body.get("filename") or "").strip()
-    title    = (body.get("title")    or "").strip()
-    year     = (body.get("year")     or "").strip()
-    rating   = (body.get("rating")   or "N/A").strip()
-    plot     = (body.get("plot")     or "").strip()
+    key      = (body.get("key")      or "").strip()
 
-    if not filename or not title:
-        print(f"[LINK METADATA] Bad request — filename={filename!r}, title={title!r}")
-        return jsonify(error="Missing filename or title"), 400
+    if not filename or not _safe_poster_path(filename):
+        print(f"[LINK METADATA] Bad request — filename={filename!r}")
+        return jsonify(error="Missing or invalid filename"), 400
 
-    if not _safe_poster_path(filename):
-        print(f"[LINK METADATA] Path traversal attempt: {filename!r}")
-        return jsonify(error="Invalid filename"), 400
+    src = CACHE.get(key) if key else None
+    if is_found(src):
+        entry = dict(src)
+    else:
+        title = (body.get("title") or "").strip()
+        if not title:
+            return jsonify(error="Missing title"), 400
+        entry = {"title": title, "year": (body.get("year") or "").strip() or "N/A",
+                 "rating": None, "plot": (body.get("plot") or "").strip() or None}
+    entry["linked_from"] = entry.get("source")
+    entry["source"]      = "linked"
 
-    entry = {
-        "title":  title,
-        "year":   year   if year   else "N/A",
-        "rating": rating if rating else "N/A",
-        "plot":   plot   if plot   else "No plot available",
-        "source": "linked",
-    }
-
-    print(f"[LINK METADATA] {filename!r}  <-  '{title}' ({entry['year']})  rating={entry['rating']}")
-
-    CACHE[filename]      = entry
-    data_cache[filename] = entry
-
-    try:
-        _save_cache(CACHE)
-    except Exception as exc:
-        print(f"[LINK METADATA ERROR] cache write failed: {exc}")
-        return jsonify(error="Cache write failed"), 500
-
+    print(f"[LINK METADATA] {filename!r}  <-  '{entry['title']}' ({entry.get('year')})")
+    CACHE[filename] = entry
+    _save_cache(CACHE)
     _GRID_CACHE["html"] = ""
+    return jsonify(ok=True, poster=_poster_meta(filename))
 
-    return jsonify(
-        ok     = True,
-        title  = entry["title"],
-        year   = entry["year"],
-        rating = entry["rating"],
-        plot   = entry["plot"],
-    )
+
+# ── Needs Fix panel ───────────────────────────────────────────────────────────
+
+_REASON_ORDER = ("not_found", "low_confidence", "missing", "mismatch")
+
+
+def _cluster_posters(infos):
+    """
+    Group posters that stack together visually: same display title (numbers,
+    punctuation and a leading article normalised), split by release year.
+    Posters without a year join the title's only year group.
+    """
+    by_title = {}
+    for info in infos:
+        by_title.setdefault(P.match_form(info["d"]["title"]) or info["fn"].lower(), []).append(info)
+    clusters = []
+    for members in by_title.values():
+        years, loose = {}, []
+        for m in members:
+            y, _ = P.year_range(m["d"]["year"])
+            if y is None:
+                loose.append(m)
+                continue
+            near = next((k for k in years if abs(k - y) <= 1), None)
+            years.setdefault(near if near is not None else y, []).append(m)
+        groups = list(years.values())
+        if len(groups) == 1:
+            groups[0].extend(loose)
+        elif loose:
+            groups.append(loose)
+        clusters.extend(groups)
+    return clusters
+
+
+def _compute_needs_fix():
+    infos = []
+    for fn in _poster_files():
+        res = resolve(fn)
+        infos.append({"fn": fn, "res": res, "d": display(res)})
+
+    rows, ignored = [], []
+    for ci, members in enumerate(_cluster_posters(infos)):
+        files = [m["fn"] for m in members]
+        # Mismatch: auto-matched variants that resolved to different titles (or to
+        # different IDs at the same provider), or some matched and some not
+        auto    = [m for m in members if not m["res"]["override"]]
+        matched = [m for m in auto if m["res"]["entry"]]
+        works   = {(P.match_form(m["res"]["entry"].get("title")), P.year_range(m["res"]["entry"].get("year"))[0])
+                   for m in matched}
+        per_src = {}
+        for m in matched:
+            if m["d"]["id"]:
+                per_src.setdefault(m["d"]["source"], set()).add(m["d"]["id"])
+        mixed = len(auto) > 1 and (len(works) > 1 or any(len(v) > 1 for v in per_src.values())
+                                   or 0 < len(matched) < len(auto))
+
+        for m in members:
+            res, d, ov = m["res"], m["d"], m["res"]["override"]
+            if ov.get("ignore"):
+                ignored.append({"filename": m["fn"], "title": d["title"], "stack": files})
+                continue
+            if ov:                        # manual fix: never flagged again
+                continue
+            reasons = []
+            e = res["entry"]
+            if not e:
+                reasons.append("not_found")
+            else:
+                if d["confidence"] is not None and d["confidence"] < P.LOW_CONF:
+                    reasons.append("low_confidence")
+                missing = [f for f, bad in (("year", d["year"] in (None, "", "N/A")),
+                                            ("rating", d["rating"] is None),
+                                            ("plot", d["plot"] in (None, "", "No plot available")))
+                           if bad]
+                if missing:
+                    reasons.append("missing")
+            if mixed:
+                reasons.append("mismatch")
+            if not reasons:
+                continue
+            neg = res["negative"] or {}
+            rows.append({
+                "filename": m["fn"],
+                "title":    d["title"],
+                "query":    res["title_guess"],
+                "year":     res["year_guess"] or "",
+                "reasons":  reasons,
+                "missing":  missing if e else [],
+                "pending":  not e and needs_lookup(res),
+                "match": ({"title": e.get("title"), "year": d["year"], "source": d["source"],
+                           "id": d["id"], "confidence": d["confidence"]} if e else None),
+                "closest":  neg.get("best_guess"),
+                "stack":    files,
+                "stack_id": ci,
+            })
+    rows.sort(key=lambda r: (r["title"].lower(), r["filename"].lower()))
+    ignored.sort(key=lambda r: r["title"].lower())
+    return {"count": len(rows), "items": rows, "ignored": ignored}
+
+
+@main_bp.route("/needs_fix")
+def needs_fix():
+    return jsonify(_compute_needs_fix())
+
+
+@main_bp.route("/fix_search")
+def fix_search():
+    q        = (request.args.get("q") or "").strip()
+    provider = (request.args.get("provider") or "auto").strip().lower()
+    year     = (request.args.get("year") or "").strip() or None
+    if not q:
+        return jsonify(results=[], errors=[])
+    exact = parse_id_input(q, provider)
+    try:
+        if exact:
+            e = fetch_by_id(*exact)
+            if not e:
+                return jsonify(results=[], errors=[f"No {P.PROVIDER_LABELS.get(exact[0], exact[0])} record for {exact[1]}"])
+            e = dict(e, score=1.0, rating_label=P.rating_label(e.get("rating")))
+            return jsonify(results=[e], errors=[], exact=True)
+        return jsonify(**search_candidates(q, provider, year))
+    except ProviderError as err:
+        return jsonify(results=[], errors=[str(err)]), 502
+    except ValueError as err:
+        return jsonify(results=[], errors=[str(err)]), 400
+
+
+def _valid_targets(files) -> list[str]:
+    out = []
+    for f in files or []:
+        f = str(f or "").strip()
+        p = _safe_poster_path(f) if f else None
+        if p and os.path.isfile(p) and f not in out:
+            out.append(f)
+    return out
+
+
+@main_bp.route("/fix_match", methods=["POST"])
+def fix_match():
+    """Link posters to an exact provider record. Body: {files, source, id, display_title?}."""
+    body   = request.get_json(silent=True) or {}
+    files  = _valid_targets(body.get("files"))
+    source = (body.get("source") or "").strip().lower()
+    pid    = str(body.get("id") or "").strip()
+    dtitle = (body.get("display_title") or "").strip()
+    if not files or source not in P.BY_ID or not pid:
+        return jsonify(error="Missing files, source or id"), 400
+    try:
+        entry = fetch_by_id(source, pid)
+    except ProviderError as err:
+        return jsonify(error=str(err)), 502
+    if not entry:
+        return jsonify(error=f"No {P.PROVIDER_LABELS.get(source, source)} record {pid}"), 404
+
+    for f in files:
+        ov = {k: v for k, v in (OVERRIDES.get(f) or {}).items() if k == "display_title"}
+        ov.update({"source": source, "id": str(entry["id"])})
+        if dtitle:
+            ov["display_title"] = dtitle
+        OVERRIDES[f] = ov
+    save_overrides()
+    _GRID_CACHE["html"] = ""
+    print(f"[FIX] {len(files)} poster(s) → {entry['title']} ({entry.get('year')}) "
+          f"[{P.PROVIDER_LABELS.get(source)} {entry['id']}]")
+    nf = _compute_needs_fix()
+    return jsonify(ok=True, posters={f: _poster_meta(f) for f in files}, count=nf["count"])
+
+
+@main_bp.route("/fix_ignore", methods=["POST"])
+def fix_ignore():
+    """Mark posters as intentionally unmatched (or undo). Body: {files, ignore}."""
+    body   = request.get_json(silent=True) or {}
+    files  = _valid_targets(body.get("files"))
+    ignore = bool(body.get("ignore", True))
+    if not files:
+        return jsonify(error="Missing files"), 400
+    for f in files:
+        ov = dict(OVERRIDES.get(f) or {})
+        if ignore:
+            ov = {k: v for k, v in ov.items() if k == "display_title"}
+            ov["ignore"] = True
+        else:
+            ov.pop("ignore", None)
+        if ov:
+            OVERRIDES[f] = ov
+        else:
+            OVERRIDES.pop(f, None)
+    save_overrides()
+    _GRID_CACHE["html"] = ""
+    nf = _compute_needs_fix()
+    return jsonify(ok=True, posters={f: _poster_meta(f) for f in files}, count=nf["count"])

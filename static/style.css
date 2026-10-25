@@ -1641,6 +1641,14 @@ body.light-mode .icon-sun  { display: block; }
 .card-link-btn { color: #7ec8e3; }
 .card-link-btn:hover { background: rgba(126,200,227,0.18); border-color: #7ec8e3; color: #a8dff0; }
 
+/* "Metadata: AniList" — which provider the details came from */
+.lb-meta-source {
+  margin: -4px 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+}
+
 /* "Link Metadata" button in lightbox sidebar */
 .lb-link-row { margin: 6px 0 8px; }
 .lb-link-meta-btn {

@@ -1,11 +1,46 @@
 // ── Steam UI helpers ──────────────────────────────────────────────────────────
 
+// \u2500\u2500 Ratings (native scale per source) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+const _RATING_LABELS   = { imdb: 'IMDb', anilist: 'AniList', kitsu: 'Kitsu', jikan: 'MAL' };
+const _PROVIDER_LABELS = { omdb: 'OMDb', anilist: 'AniList', kitsu: 'Kitsu', jikan: 'Jikan',
+                           linked: 'Linked', manual: 'Manual' };
+
+/** "7.8/10", or with the source "IMDb 7.8/10" / "AniList 80/100"; '' when there is no rating. */
+function _ratingText(item, withSource) {
+  const v = item.dataset.rating;
+  if (!v || v === 'N/A') return '';
+  const src = _RATING_LABELS[item.dataset.ratingSrc] || '';
+  return (withSource && src ? src + ' ' : '') + v + '/' + (item.dataset.ratingScale || '10');
+}
+
+/** 0\u2013100 regardless of source, for sorting mixed IMDb / AniList / Kitsu ratings. */
+function _ratingNorm(item) {
+  const n = parseFloat(item.dataset.ratingNorm);
+  return isNaN(n) ? -1 : n;
+}
+
+const _META_KEYS = ['title', 'year', 'rating', 'ratingScale', 'ratingSrc', 'ratingNorm', 'plot', 'metaSrc', 'metaConf'];
+
+/** Apply server metadata (/fix_match, /link_metadata \u2026) to a grid card and anything showing it. */
+function _applyPosterMeta(item, meta) {
+  if (!item || !meta) return;
+  _META_KEYS.forEach(function (k) { if (meta[k] !== undefined && meta[k] !== null) item.dataset[k] = meta[k]; });
+  const ov = item.querySelector('.card-overlay');
+  if (ov && item.dataset.editing !== 'true') _updateCardOverlayContent(ov, item);
+  if (_lightboxGridItem === item && document.getElementById('lightbox')?.classList.contains('show')) {
+    const img = item.querySelector('img');
+    if (img) openLightbox(img.src, img);
+  }
+  if (_theater.active && _thCurItem() === item) _thRenderHero();
+}
+
 /** Update the text content of an existing .card-overlay from its parent grid-item's data-* attrs. */
 function _updateCardOverlayContent(overlay, item) {
   const title  = item.dataset.title  || '';
   const year   = item.dataset.year   || '';
-  const rating = (item.dataset.rating && item.dataset.rating !== 'N/A')
-    ? '\u2605 ' + item.dataset.rating : '';
+  const r      = _ratingText(item, false);
+  const rating = r ? '\u2605 ' + r : '';
   const meta = [year, rating].filter(Boolean).join(' \u00b7 ');
   const pr   = parseInt(item.dataset.personalRating || '0', 10);
   const stars = pr > 0
@@ -1139,7 +1174,8 @@ function openLightbox(imageSrc, element) {
   if (parent?.dataset.filename) imageSrc = _posterUrl(parent.dataset.filename);
   const title       = parent?.dataset.title  || 'N/A';
   const displayYear = parent?.dataset.year   || 'N/A';
-  const rating      = parent?.dataset.rating || 'N/A';
+  const rating      = (parent && _ratingText(parent, true)) || 'N/A';
+  const metaSrc     = _PROVIDER_LABELS[parent?.dataset.metaSrc] || '';
   const plot        = parent?.dataset.plot   || 'No plot available';
 
   // Decode the filename from the absolute URL the browser stores in img.src
@@ -1206,9 +1242,10 @@ function openLightbox(imageSrc, element) {
       '<button class="lb-field-btn" onclick="_startFieldEdit(\'year\')">\u270f</button>' +
     '</div>' +
     '<div class="lb-field-row" id="lb-field-imdb">' +
-      '<span class="lb-field-label">IMDb:</span>' +
+      '<span class="lb-field-label">Rating:</span>' +
       '<span class="lb-field-val">' + escHtml(rating) + '</span>' +
     '</div>' +
+    (metaSrc ? '<div class="lb-meta-source">Metadata: ' + escHtml(metaSrc) + '</div>' : '') +
     '<div class="lb-link-row">' +
       '<button class="lb-link-meta-btn" onclick="openLinkModal(_lightboxGridItem, _applyLinkedMetadata)">' +
         '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="vertical-align:-1px;margin-right:4px"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>' +
@@ -2532,13 +2569,7 @@ function _buildLinkUI(container, filename) {
       const resp = await fetch('/link_metadata', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-          filename: filename,
-          title:    _selected.title,
-          year:     _selected.year,
-          rating:   _selected.rating,
-          plot:     _selected.plot,
-        }),
+        body:    JSON.stringify({ filename: filename, key: _selected.key }),
       });
       const data = await resp.json();
       if (!resp.ok) {
@@ -2547,17 +2578,9 @@ function _buildLinkUI(container, filename) {
         applyBtn.disabled    = false;
         return;
       }
-      // Notify the caller (lightbox path) to update its display fields
-      if (_linkModalOnSuccess) _linkModalOnSuccess(data);
-      // Always sync the grid item's data-* attrs and overlay
-      if (_linkModalGridItem) {
-        if (data.title)  _linkModalGridItem.dataset.title  = data.title;
-        if (data.year)   _linkModalGridItem.dataset.year   = data.year;
-        if (data.rating) _linkModalGridItem.dataset.rating = data.rating;
-        if (data.plot)   _linkModalGridItem.dataset.plot   = data.plot;
-        const ov = _linkModalGridItem.querySelector('.card-overlay');
-        if (ov) _updateCardOverlayContent(ov, _linkModalGridItem);
-      }
+      // Sync the grid card (and the lightbox, if it's showing this poster)
+      if (_linkModalGridItem) _applyPosterMeta(_linkModalGridItem, data.poster);
+      else if (_linkModalOnSuccess) _linkModalOnSuccess(data.poster);
       showToast('\u2713 Metadata linked');
       closeLinkModal();
     } catch (_) {
@@ -2586,7 +2609,9 @@ function _applyLinkedMetadata(data) {
   const imdbRow = document.getElementById('lb-field-imdb');
   if (imdbRow && data.rating) {
     const v = imdbRow.querySelector('.lb-field-val');
-    if (v) v.textContent = data.rating;
+    const src = _RATING_LABELS[data.ratingSrc] || '';
+    if (v) v.textContent = data.rating === 'N/A' ? 'N/A'
+      : (src ? src + ' ' : '') + data.rating + '/' + (data.ratingScale || '10');
   }
   const plotRow = document.getElementById('lb-field-plot');
   if (plotRow && data.plot) {
@@ -2839,14 +2864,16 @@ function _thRenderHero() {
   const hero = document.getElementById('th-hero');
   if (!item || !hero) return;
   const year   = item.dataset.year && item.dataset.year !== 'N/A' ? item.dataset.year : '';
-  const imdb   = item.dataset.rating && item.dataset.rating !== 'N/A' ? item.dataset.rating : '';
+  const score  = _ratingText(item, false);
+  const scoreSrc = _RATING_LABELS[item.dataset.ratingSrc] || '';
   const pr     = parseInt(item.dataset.personalRating || '0', 10);
   const plot   = item.dataset.plot && item.dataset.plot !== 'No plot available' ? item.dataset.plot : '';
   const status = item.dataset.watched === 'watched' ? '\u2713 Watched'
                : item.dataset.watched === 'want_to_watch' ? '\u2665 Want to Watch' : '';
   const parts = [];
   if (year)   parts.push('<span>' + escHtml(year) + '</span>');
-  if (imdb)   parts.push('<span class="th-imdb">IMDb</span><span>' + escHtml(imdb) + '</span>');
+  if (score)  parts.push((scoreSrc ? '<span class="th-imdb">' + escHtml(scoreSrc) + '</span>' : '') +
+                         '<span>' + escHtml(score) + '</span>');
   if (pr > 0) parts.push('<span class="th-stars" aria-label="My rating ' + pr + ' of 5">' + '\u2605'.repeat(pr) + '<span class="th-stars-off">' + '\u2605'.repeat(5 - pr) + '</span></span>');
   if (status) parts.push('<span class="th-status">' + status + '</span>');
 
