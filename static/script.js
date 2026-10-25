@@ -25,9 +25,14 @@ const _META_KEYS = ['title', 'year', 'rating', 'ratingScale', 'ratingSrc', 'rati
 /** Apply server metadata (/fix_match, /link_metadata \u2026) to a grid card and anything showing it. */
 function _applyPosterMeta(item, meta) {
   if (!item || !meta) return;
+  const oldTitle = item.dataset.title;
   _META_KEYS.forEach(function (k) { if (meta[k] !== undefined && meta[k] !== null) item.dataset[k] = meta[k]; });
   const ov = item.querySelector('.card-overlay');
   if (ov && item.dataset.editing !== 'true') _updateCardOverlayContent(ov, item);
+  if (oldTitle !== item.dataset.title) {
+    _placeInSortedGrid(item);
+    if (!_groupViewActive) _applySearchAndFilter(_currentSearchTerm(), currentFilter);
+  }
   if (_lightboxGridItem === item && document.getElementById('lightbox')?.classList.contains('show')) {
     const img = item.querySelector('img');
     if (img) openLightbox(img.src, img);
@@ -413,6 +418,66 @@ function _syncLightboxWatchBtns(status) {
   const btnT = document.getElementById('lb-btn-want');
   if (btnW) btnW.classList.toggle('lb-watch-active', status === 'watched');
   if (btnT) btnT.classList.toggle('lb-watch-active', status === 'want_to_watch');
+}
+
+// ── A–Z sorting (shared by the main grid and Big Picture) ─────────────────────
+// Case-insensitive, accents/punctuation ignored, a leading The/A/An skipped
+// ("The Dark Knight" sorts under D), natural number order ("2 Fast 2 Furious"
+// before "10 Cloverfield Lane", "Part 2" before "Part 10"), titles starting
+// with a number before letters; ties broken by year, then filename.
+
+const _titleCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+const _sortKeyCache  = new Map();
+
+function sortKey(title) {
+  const t = String(title || '');
+  let k = _sortKeyCache.get(t);
+  if (k === undefined) {
+    k = t.normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/&/g, ' and ')
+      .replace(/['‘’`]/g, '')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim()
+      .replace(/^(?:the|a|an) (?=\S)/, '');
+    _sortKeyCache.set(t, k);
+  }
+  return k;
+}
+
+/** First 4-digit year of a grid item ("2013–2023" → 2013), or null. */
+function _itemYear(item) {
+  const m = (item.dataset.year || '').match(/\d{4}/);
+  return m ? parseInt(m[0], 10) : null;
+}
+
+function compareItemsAZ(a, b) {
+  const ya = _itemYear(a), yb = _itemYear(b);
+  return _titleCollator.compare(sortKey(a.dataset.title), sortKey(b.dataset.title)) ||
+    (ya === null ? 1e5 : ya) - (yb === null ? 1e5 : yb) ||
+    _titleCollator.compare(a.dataset.filename || '', b.dataset.filename || '');
+}
+
+/** Put every grid card in A–Z order (DOM order drives pagination and stacking). */
+function _sortGrid() {
+  const grid = document.querySelector('.grid-container');
+  if (!grid) return;
+  const items = Array.from(grid.querySelectorAll(':scope > .grid-item')).sort(compareItemsAZ);
+  const frag  = document.createDocumentFragment();
+  items.forEach(function (i) { frag.appendChild(i); });
+  grid.appendChild(frag);
+}
+
+/** Insert / move one card to its A–Z position. */
+function _placeInSortedGrid(item) {
+  const grid = document.querySelector('.grid-container');
+  if (!grid) return;
+  _collapseStackRows(true);
+  const others = Array.from(grid.querySelectorAll(':scope > .grid-item')).filter(function (i) { return i !== item; });
+  const next = others.find(function (o) { return compareItemsAZ(item, o) < 0; });
+  if (next) grid.insertBefore(item, next);
+  else if (others.length) others[others.length - 1].after(item);
+  else grid.appendChild(item);
 }
 
 // ── Smart search ──────────────────────────────────────────────────────────────
@@ -1685,6 +1750,7 @@ function addNewPosterToGrid(filename, title, year) {
   _addCardOverlay(div);
 
   container.appendChild(div);
+  _placeInSortedGrid(div);
 
   // Refresh recent strip and total count to include the new poster
   populateRecentStrip();
@@ -3074,30 +3140,165 @@ function _visibleGridImg(item) {
   return item.querySelector('img');
 }
 
-function _thCollectRows(recent) {
+// Big Picture sort — applies inside every row except "Recently Added" (always newest first)
+const _TH_SORTS = [
+  { id: 'az',       label: 'A–Z' },
+  { id: 'za',       label: 'Z–A' },
+  { id: 'year_new', label: 'Year (newest)' },
+  { id: 'year_old', label: 'Year (oldest)' },
+  { id: 'rating',   label: 'Rating (high → low)' },
+  { id: 'recent',   label: 'Recently added' },
+];
+
+function _thSortMode() {
+  let v = null;
+  try { v = localStorage.getItem('th_sort'); } catch (_) {}
+  return _TH_SORTS.some(function (s) { return s.id === v; }) ? v : 'az';
+}
+
+function _thSortList(list, mode) {
+  const rank = _theater.recentRank || new Map();
+  const yr   = function (i, missing) { const y = _itemYear(i); return y === null ? missing : y; };
+  const cmp  = {
+    az:       compareItemsAZ,
+    za:       function (a, b) { return compareItemsAZ(b, a); },
+    year_new: function (a, b) { return yr(b, -1) - yr(a, -1) || compareItemsAZ(a, b); },
+    year_old: function (a, b) { return yr(a, 1e5) - yr(b, 1e5) || compareItemsAZ(a, b); },
+    // Normalised 0–100, so IMDb x/10 and AniList/Kitsu x/100 sort together
+    rating:   function (a, b) { return _ratingNorm(b) - _ratingNorm(a) || compareItemsAZ(a, b); },
+    recent:   function (a, b) {
+      const ra = rank.has(a.dataset.filename) ? rank.get(a.dataset.filename) : 1e6;
+      const rb = rank.has(b.dataset.filename) ? rank.get(b.dataset.filename) : 1e6;
+      return ra - rb || compareItemsAZ(a, b);
+    },
+  }[mode] || compareItemsAZ;
+  return list.slice().sort(cmp);
+}
+
+function _thCollectRows() {
+  const mode   = _thSortMode();
   const items  = Array.from(document.querySelectorAll('.grid-item'));
   const byFile = new Map(items.map(function (i) { return [i.dataset.filename, i]; }));
   const pr     = function (i) { return parseInt(i.dataset.personalRating || '0', 10); };
   const rows   = [];
   function add(title, list, kind) { if (list.length) rows.push({ title: title, items: list, kind: kind || '' }); }
+  function sorted(list) { return _thSortList(list, mode); }
 
-  add('Recently Added', (recent || []).map(function (r) { return byFile.get(r.filename); }).filter(Boolean));
-  add('Want to Watch',  items.filter(function (i) { return i.dataset.watched === 'want_to_watch'; }));
-  add('Watched',        items.filter(function (i) { return i.dataset.watched === 'watched'; }));
-  add('Top Rated',      items.filter(function (i) { return pr(i) > 0; }).sort(function (a, b) {
-    return pr(b) - pr(a) || (a.dataset.title || '').localeCompare(b.dataset.title || '');
-  }));
+  add('Recently Added', (_theater.recent || []).slice(0, 30)
+    .map(function (r) { return byFile.get(r.filename); }).filter(Boolean));
+  add('Want to Watch',  sorted(items.filter(function (i) { return i.dataset.watched === 'want_to_watch'; })));
+  add('Watched',        sorted(items.filter(function (i) { return i.dataset.watched === 'watched'; })));
+  add('Top Rated',      sorted(items.filter(function (i) { return pr(i) > 0; })));
 
   const groups = {};
   items.forEach(function (i) {
     const g = (i.dataset.collection || '').trim();
     if (g) (groups[g] = groups[g] || []).push(i);
   });
-  Object.keys(groups).sort(function (a, b) { return a.toLowerCase().localeCompare(b.toLowerCase()); })
-    .forEach(function (g) { add(g, groups[g], 'collection'); });
+  Object.keys(groups).sort(function (a, b) { return _titleCollator.compare(sortKey(a), sortKey(b)); })
+    .forEach(function (g) { add(g, sorted(groups[g]), 'collection'); });
 
-  if (!rows.length) add('Library', items);
+  // The whole library — in stacked mode one card per movie, sorted by the stack's shared title
+  let library = items;
+  if (_stackMode) {
+    _syncStacks();
+    library = items.filter(function (i) { return !i.classList.contains('stack-hidden'); });
+  }
+  add('Library', sorted(library));
   return rows;
+}
+
+function _thSyncSortUI() {
+  const mode  = _thSortMode();
+  const label = document.getElementById('th-sort-label');
+  if (label) label.textContent = _TH_SORTS.find(function (s) { return s.id === mode; }).label;
+  document.querySelectorAll('#th-sort-menu [data-sort]').forEach(function (b) {
+    b.setAttribute('aria-checked', b.dataset.sort === mode ? 'true' : 'false');
+  });
+}
+
+function _thToggleSortMenu(force) {
+  const menu = document.getElementById('th-sort-menu');
+  const btn  = document.getElementById('th-sort-btn');
+  if (!menu || !btn) return;
+  const open = typeof force === 'boolean' ? force : menu.hidden;
+  menu.hidden = !open;
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) {
+    _thSyncSortUI();
+    (menu.querySelector('[aria-checked="true"]') || menu.querySelector('button'))?.focus();
+  }
+}
+
+/** Change the Big Picture sort (null = reset to the A–Z default) and re-lay out the rows. */
+function _thSetSort(mode) {
+  try {
+    if (mode) localStorage.setItem('th_sort', mode);
+    else localStorage.removeItem('th_sort');
+  } catch (_) {}
+  _thSyncSortUI();
+  if (!_theater.active) return;
+  const cur      = _thCurItem();
+  const rowTitle = _theater.rows[_theater.row]?.title;
+  _theater.rows  = _thCollectRows();
+  _thBuild();
+  let r = _theater.rows.findIndex(function (row) { return row.title === rowTitle; });
+  if (r < 0) r = 0;
+  const c = cur ? Math.max(0, _theater.rows[r].items.indexOf(cur)) : 0;
+  _theater.row = r;
+  _thFocus(r, c, { instant: true });
+  const pill = document.getElementById('th-sort-btn');
+  if (pill && !_reducedMotion()) {
+    pill.classList.remove('th-sort-flash');
+    void pill.offsetWidth;
+    pill.classList.add('th-sort-flash');
+  }
+}
+
+function _thCycleSort() {
+  const i = _TH_SORTS.findIndex(function (s) { return s.id === _thSortMode(); });
+  _thSetSort(_TH_SORTS[(i + 1) % _TH_SORTS.length].id);
+}
+
+function _thInitSort() {
+  const menu = document.getElementById('th-sort-menu');
+  const btn  = document.getElementById('th-sort-btn');
+  if (!menu || !btn) return;
+  menu.innerHTML = _TH_SORTS.map(function (s) {
+    return '<button type="button" role="menuitemradio" data-sort="' + s.id + '">' + escHtml(s.label) + '</button>';
+  }).join('') + '<div class="th-sort-sep" role="separator"></div>' +
+    '<button type="button" role="menuitem" data-sort-reset>Reset to A–Z</button>';
+  btn.addEventListener('click', function (e) { e.stopPropagation(); _thToggleSortMenu(); });
+  menu.addEventListener('click', function (e) {
+    const b = e.target.closest('button');
+    if (!b) return;
+    _thSetSort(b.hasAttribute('data-sort-reset') ? null : b.dataset.sort);
+    _thToggleSortMenu(false);
+    btn.focus();
+  });
+  document.addEventListener('click', function (e) {
+    if (!menu.hidden && !e.target.closest('#th-sort')) _thToggleSortMenu(false);
+  });
+  _thSyncSortUI();
+}
+
+/** Arrow keys / Enter / Esc inside the open sort menu. Returns true if handled. */
+function _thSortMenuKey(e) {
+  const menu = document.getElementById('th-sort-menu');
+  if (!menu || menu.hidden) return false;
+  const items = Array.from(menu.querySelectorAll('button'));
+  const idx   = items.indexOf(document.activeElement);
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    const d = e.key === 'ArrowDown' ? 1 : -1;
+    items[(idx + d + items.length) % items.length].focus();
+    return true;
+  }
+  if (e.key === 'o' || e.key === 'O') {
+    _thToggleSortMenu(false);
+    document.getElementById('th-sort-btn')?.focus();
+    return true;
+  }
+  return false;   // Enter / Space click the focused item; Tab moves focus normally
 }
 
 function _thBuild() {
@@ -3399,13 +3600,17 @@ async function enterTheater() {
   document.getElementById('recent-toggle-btn')?.classList.remove('active');
 
   // Fullscreen must be requested inside the click / key gesture, so start it first
-  const recentReq = fetch('/recently_added?limit=30')
+  // (every poster, newest first: the Recently Added row + the "Recently added" sort)
+  const recentReq = fetch('/recently_added?limit=0')
     .then(function (r) { return r.ok ? r.json() : []; })
     .catch(function () { return []; });
   const [, recent] = await Promise.all([_requestFullscreen(), recentReq]);
 
   await _refreshPosterColors();
-  _theater.rows    = _thCollectRows(recent);
+  _theater.recent     = recent;
+  _theater.recentRank = new Map(recent.map(function (r, i) { return [r.filename, i]; }));
+  _thSyncSortUI();
+  _theater.rows    = _thCollectRows();
   _theater.row     = 0;
   _theater.scrollY = window.scrollY;
   _theater.touch   = _coarseMQ.matches;
@@ -3491,6 +3696,7 @@ function _thHandleKey(e) {
     return true;
   }
   if (k === 'Enter' || k === ' ') { _thOpen(); return true; }
+  if (k === 'o') { _thCycleSort(); return true; }      // (S is already "down" in WASD)
   if (k === 'Home') { _thFocus(_theater.row, 0); return true; }
   if (k === 'End')  { _thFocus(_theater.row, Infinity); return true; }
   return false;
@@ -3603,7 +3809,7 @@ function _padTick(t) {
     _pad.last = t;
     _padAction(dir);
   }
-  [[0, 'open'], [1, 'back'], [9, 'start']].forEach(function (pair) {
+  [[0, 'open'], [1, 'back'], [3, 'sort'], [9, 'start']].forEach(function (pair) {
     const pressed = b(pair[0]);
     if (pressed && !_pad.btn[pair[0]]) _padAction(pair[1]);
     _pad.btn[pair[0]] = pressed;
@@ -3629,6 +3835,7 @@ function _padAction(act) {
   if (act === 'up')    _thMove(0, -1);
   if (act === 'down')  _thMove(0, 1);
   if (act === 'open')  _thOpen();
+  if (act === 'sort')  _thCycleSort();
   if (act === 'back' || act === 'start') exitTheater();
 }
 
@@ -3795,6 +4002,9 @@ document.addEventListener('DOMContentLoaded', function () {
   // Add card overlay + pencil btn to every server-rendered grid item
   document.querySelectorAll('.grid-item').forEach(_addCardOverlay);
 
+  // A–Z by display title (the server renders filename order)
+  _sortGrid();
+
   // Insert the "Add Poster" placeholder card at position 0
   _insertAddPosterCard();
 
@@ -3872,6 +4082,9 @@ document.addEventListener('DOMContentLoaded', function () {
         closeLightbox();
       } else if (_fix.open) {
         closeFixPanel();
+      } else if (_theater.active && !document.getElementById('th-sort-menu')?.hidden) {
+        _thToggleSortMenu(false);
+        document.getElementById('th-sort-btn')?.focus();
       } else if (_theater.active) {
         exitTheater();
       }
@@ -3890,7 +4103,8 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
     if (_theater.active && !lbOpen) {
-      if (_thHandleKey(e)) e.preventDefault();
+      const sortMenuOpen = !document.getElementById('th-sort-menu')?.hidden;
+      if (sortMenuOpen ? _thSortMenuKey(e) : _thHandleKey(e)) e.preventDefault();
       return;
     }
     if (e.key === 'ArrowRight') { if (lbOpen) lightboxStep(1);  else changePage(1); }
@@ -3900,6 +4114,7 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('closeLightbox')?.addEventListener('click', closeLightbox);
   _initLightboxSwipe();
   _thInit();
+  _thInitSort();
   _initTilt();
   _refreshPosterColors();
 

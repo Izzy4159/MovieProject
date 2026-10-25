@@ -212,7 +212,20 @@
 
     <header class="th-top">
       <span class="th-brand">MOVIEDB <span class="th-brand-sub">THEATER</span></span>
-      <button class="th-exit" onclick="toggleTheater()" aria-label="Exit theater mode">&#x2715;<span class="th-exit-label">Exit</span></button>
+      <div class="th-top-actions">
+        <div class="th-sort" id="th-sort">
+          <button type="button" class="th-sort-btn" id="th-sort-btn" aria-haspopup="menu" aria-expanded="false"
+                  aria-controls="th-sort-menu" title="Sort (O / gamepad Y cycles)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 6h13M3 12h9M3 18h5"/><path d="M18 8v12M15 17l3 3 3-3"/>
+            </svg>
+            <span class="th-sort-k">Sort:</span> <span id="th-sort-label">A&#8211;Z</span>
+          </button>
+          <div class="th-sort-menu" id="th-sort-menu" role="menu" aria-label="Sort posters" hidden></div>
+        </div>
+        <button class="th-exit" onclick="toggleTheater()" aria-label="Exit theater mode">&#x2715;<span class="th-exit-label">Exit</span></button>
+      </div>
     </header>
 
     <section class="th-hero" id="th-hero" aria-live="polite">
@@ -228,6 +241,7 @@
     <footer class="th-hints" aria-hidden="true">
       <span><kbd>&#8592;</kbd><kbd>&#8593;</kbd><kbd>&#8595;</kbd><kbd>&#8594;</kbd> / <kbd>WASD</kbd> Move</span>
       <span><kbd>Enter</kbd> Open</span>
+      <span><kbd>O</kbd> / <kbd>Y</kbd> Sort</span>
       <span><kbd>Esc</kbd> Back</span>
       <span class="th-hint-pad">&#127918; Gamepad ready</span>
     </footer>

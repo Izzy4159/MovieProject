@@ -802,10 +802,11 @@ def recently_added():
     for r in entries:
         del r["mtime"]          # client doesn't need the raw timestamp
     try:
-        limit = max(1, min(int(request.args.get("limit", RECENT_COUNT)), 100))
+        limit = int(request.args.get("limit", RECENT_COUNT))
     except ValueError:
         limit = RECENT_COUNT
-    return jsonify(entries[:limit])
+    # limit=0 → every poster, newest first (Big Picture's "Recently added" sort)
+    return jsonify(entries if limit == 0 else entries[:max(1, min(limit, 100))])
 
 
 @main_bp.route("/save_zoom", methods=["POST"])
