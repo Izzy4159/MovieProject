@@ -15,12 +15,15 @@ __pycache__/
 # OS / editor junk
 .DS_Store
 Thumbs.db
+.idea/
+*.code-workspace
 
 # Personal library state (local-only; the live site starts empty)
 watched.json
 personal_ratings.json
 collections.json
 stack_covers.json
+poster_zoom.json
 
 # Generated grid thumbnails + dominant-colour cache (posters/thumbs/colors.json)
 posters/thumbs/

@@ -144,7 +144,7 @@ MovieProject/
 ├── backfill_poster_ids.py   # CLI: record stable OMDb/Jikan IDs per poster
 ├── omdb_cache.json          # Cached API responses (auto-updated, committed)
 ├── poster_ids.json          # Stable filename → OMDb/Jikan ID map (committed)
-├── poster_zoom.json         # Per-poster lightbox zoom (committed)
+├── poster_zoom.json         # Per-poster lightbox zoom         (local-only, git-ignored)
 ├── watched.json             # Per-poster watch status          (local-only, git-ignored)
 ├── personal_ratings.json    # Per-poster star ratings (1–5)    (local-only, git-ignored)
 ├── collections.json         # Per-poster collection names      (local-only, git-ignored)
