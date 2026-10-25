@@ -1,0 +1,4 @@
+# Windows launcher scripts must keep CRLF (cmd's goto/labels misbehave with LF)
+*.bat text eol=crlf
+*.vbs text eol=crlf
+*.ps1 text eol=crlf

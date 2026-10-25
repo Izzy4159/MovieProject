@@ -1,0 +1,28 @@
+{
+  // F5: run main.py with the project's .venv interpreter
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Movie Poster Explorer",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": [],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Movie Poster Explorer (no watchdog, LAN)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "cwd": "${workspaceFolder}",
+      "python": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": ["--host", "0.0.0.0", "--no-watchdog"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}

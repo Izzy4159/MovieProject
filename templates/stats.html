@@ -189,5 +189,6 @@
       if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('/sw.js').catch(function () {});
     })();
   </script>
+  <script src="{{ static_v('heartbeat.js') }}" defer></script>
 </body>
 </html>
