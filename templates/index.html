@@ -264,19 +264,27 @@
       </div>
     </header>
 
-    <section class="th-hero" id="th-hero" aria-live="polite">
-      <h1 class="th-title" id="th-title"></h1>
-      <div class="th-meta" id="th-meta"></div>
-      <p class="th-plot" id="th-plot"></p>
-    </section>
+    <nav class="th-chips" id="th-chips" role="tablist" aria-label="Filter (Q / E or LB / RB)"></nav>
 
-    <div class="th-rows" id="th-rows">
-      <div class="th-rows-track" id="th-rows-track"></div>
+    <div class="th-scroll" id="th-scroll">
+      <div class="th-grid" id="th-grid" role="list"></div>
+      <p class="th-empty" id="th-empty" hidden>Nothing here yet.</p>
+    </div>
+
+    <!-- Stacked mode: a stack's posters fanned out (Enter / A on a stack) -->
+    <div class="th-variants" id="th-variants" role="dialog" aria-label="Posters of this movie" hidden>
+      <div class="th-var-head">
+        <span class="th-var-title" id="th-var-title"></span>
+        <span class="th-var-count" id="th-var-count"></span>
+        <button type="button" class="th-var-close" aria-label="Close">&#x2715;</button>
+      </div>
+      <div class="th-var-track" id="th-var-track"></div>
     </div>
 
     <footer class="th-hints" aria-hidden="true">
       <span><kbd>&#8592;</kbd><kbd>&#8593;</kbd><kbd>&#8595;</kbd><kbd>&#8594;</kbd> / <kbd>WASD</kbd> Move</span>
       <span><kbd>Enter</kbd> Open</span>
+      <span><kbd>Q</kbd><kbd>E</kbd> / <kbd>LB</kbd><kbd>RB</kbd> Filter</span>
       <span><kbd>O</kbd> / <kbd>Y</kbd> Sort</span>
       <span><kbd>Esc</kbd> Back</span>
       <span class="th-hint-pad">&#127918; Gamepad ready</span>

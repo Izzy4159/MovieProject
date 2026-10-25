@@ -1386,8 +1386,8 @@ function _lbConfirmDelete() {
 function _lightboxSequence() {
   const cur = _lightboxGridItem;
   if (_theater.active) {
-    const row = _theater.rows[_theater.row];
-    if (row && row.items.includes(cur)) return row.items;
+    const seq = _thSequence();
+    if (seq.indexOf(cur) >= 0) return seq;
   }
   const all = Array.from(document.querySelectorAll('.grid-item'));
   if (_groupViewActive && cur && cur.dataset.collection) {
@@ -3327,28 +3327,29 @@ function _initRefresh() {
   }).catch(function () {});
 }
 
-// ── Theater mode (Steam Big Picture style) ────────────────────────────────────
+// ── Big Picture mode ──────────────────────────────────────────────────────────
 //
-// Rows are built from the grid's data-* attributes plus /recently_added.
-// Keyboard / mouse / gamepad move rows with transform (GPU, no layout);
-// touch switches the rows to native overflow scrolling with scroll-snap.
-
-const _coarseMQ = window.matchMedia('(pointer: coarse)');
+// A vertical grid of large posters (4 / 3 / 2 columns by width) under a row of
+// filter chips. Focus moves in 2D with arrows / WASD / D-pad / left stick
+// (up/down = a whole row) and the scroller follows smoothly; the mouse focuses
+// on hover and the wheel / touch scroll natively. Cards show grid thumbnails
+// first; an IntersectionObserver swaps in the full-size poster for the visible
+// rows plus the next two.
 
 const _theater = {
   active:   false,
   busy:     false,     // entering / exiting in progress
-  rows:     [],        // [{ title, items, el, viewport, track, col }]
-  row:      0,
-  touch:    false,     // native-scroll mode
+  chip:     'all',
+  chips:    [],        // [{ id, label, kind, items }]
+  list:     [],        // [{ item: representative card, members: [grid items] }]
+  focus:    0,
   scrollY:  0,
   bgFront:  'a',
   bgTimer:  0,
-  preloaded: new Set(),
-  lastMouse: 0,
-  wheelAt:  0,
-  ignoreScrollUntil: 0,
-  touchRow: -1,        // row under the most recent touch
+  recent:   [],        // /recently_added?limit=0 — every poster, newest first
+  recentRank: new Map(),
+  io:       null,
+  variants: null,      // { entry, focus } while a stack's posters are fanned out
 };
 
 function toggleTheater() { _theater.active ? exitTheater() : enterTheater(); }
@@ -3389,7 +3390,8 @@ function _visibleGridImg(item) {
   return item.querySelector('img');
 }
 
-// Big Picture sort — applies inside every row except "Recently Added" (always newest first)
+// ── Sort (shared sortKey; the choice is remembered) ──
+
 const _TH_SORTS = [
   { id: 'az',       label: 'A–Z' },
   { id: 'za',       label: 'Z–A' },
@@ -3405,62 +3407,36 @@ function _thSortMode() {
   return _TH_SORTS.some(function (s) { return s.id === v; }) ? v : 'az';
 }
 
+function _thRecentRank(item) {
+  const r = _theater.recentRank.get(item.dataset.filename);
+  return r === undefined ? 1e6 : r;
+}
+
 function _thSortList(list, mode) {
-  const rank = _theater.recentRank || new Map();
-  const yr   = function (i, missing) { const y = _itemYear(i); return y === null ? missing : y; };
-  const cmp  = {
+  const yr  = function (i, missing) { const y = _itemYear(i); return y === null ? missing : y; };
+  const cmp = {
     az:       compareItemsAZ,
     za:       function (a, b) { return compareItemsAZ(b, a); },
     year_new: function (a, b) { return yr(b, -1) - yr(a, -1) || compareItemsAZ(a, b); },
     year_old: function (a, b) { return yr(a, 1e5) - yr(b, 1e5) || compareItemsAZ(a, b); },
     // Normalised 0–100, so IMDb x/10 and AniList/Kitsu x/100 sort together
     rating:   function (a, b) { return _ratingNorm(b) - _ratingNorm(a) || compareItemsAZ(a, b); },
-    recent:   function (a, b) {
-      const ra = rank.has(a.dataset.filename) ? rank.get(a.dataset.filename) : 1e6;
-      const rb = rank.has(b.dataset.filename) ? rank.get(b.dataset.filename) : 1e6;
-      return ra - rb || compareItemsAZ(a, b);
-    },
+    recent:   function (a, b) { return _thRecentRank(a) - _thRecentRank(b) || compareItemsAZ(a, b); },
   }[mode] || compareItemsAZ;
   return list.slice().sort(cmp);
-}
-
-function _thCollectRows() {
-  const mode   = _thSortMode();
-  const items  = Array.from(document.querySelectorAll('.grid-item'));
-  const byFile = new Map(items.map(function (i) { return [i.dataset.filename, i]; }));
-  const pr     = function (i) { return parseInt(i.dataset.personalRating || '0', 10); };
-  const rows   = [];
-  function add(title, list, kind) { if (list.length) rows.push({ title: title, items: list, kind: kind || '' }); }
-  function sorted(list) { return _thSortList(list, mode); }
-
-  add('Recently Added', (_theater.recent || []).slice(0, 30)
-    .map(function (r) { return byFile.get(r.filename); }).filter(Boolean));
-  add('Want to Watch',  sorted(items.filter(function (i) { return i.dataset.watched === 'want_to_watch'; })));
-  add('Watched',        sorted(items.filter(function (i) { return i.dataset.watched === 'watched'; })));
-  add('Top Rated',      sorted(items.filter(function (i) { return pr(i) > 0; })));
-
-  const groups = {};
-  items.forEach(function (i) {
-    const g = (i.dataset.collection || '').trim();
-    if (g) (groups[g] = groups[g] || []).push(i);
-  });
-  Object.keys(groups).sort(function (a, b) { return _titleCollator.compare(sortKey(a), sortKey(b)); })
-    .forEach(function (g) { add(g, sorted(groups[g]), 'collection'); });
-
-  // The whole library — in stacked mode one card per movie, sorted by the stack's shared title
-  let library = items;
-  if (_stackMode) {
-    _syncStacks();
-    library = items.filter(function (i) { return !i.classList.contains('stack-hidden'); });
-  }
-  add('Library', sorted(library));
-  return rows;
 }
 
 function _thSyncSortUI() {
   const mode  = _thSortMode();
   const label = document.getElementById('th-sort-label');
-  if (label) label.textContent = _TH_SORTS.find(function (s) { return s.id === mode; }).label;
+  const btn   = document.getElementById('th-sort-btn');
+  const fixed = _theater.chip === 'recent';      // Recently Added is always newest first
+  if (label) label.textContent = fixed ? 'Newest first'
+    : _TH_SORTS.find(function (s) { return s.id === mode; }).label;
+  if (btn) {
+    btn.classList.toggle('th-sort-fixed', fixed);
+    btn.title = fixed ? 'Recently Added is always newest first' : 'Sort (O / gamepad Y cycles)';
+  }
   document.querySelectorAll('#th-sort-menu [data-sort]').forEach(function (b) {
     b.setAttribute('aria-checked', b.dataset.sort === mode ? 'true' : 'false');
   });
@@ -3479,7 +3455,7 @@ function _thToggleSortMenu(force) {
   }
 }
 
-/** Change the Big Picture sort (null = reset to the A–Z default) and re-lay out the rows. */
+/** Change the sort (null = reset to the A–Z default) and re-lay out the grid, keeping focus. */
 function _thSetSort(mode) {
   try {
     if (mode) localStorage.setItem('th_sort', mode);
@@ -3487,15 +3463,7 @@ function _thSetSort(mode) {
   } catch (_) {}
   _thSyncSortUI();
   if (!_theater.active) return;
-  const cur      = _thCurItem();
-  const rowTitle = _theater.rows[_theater.row]?.title;
-  _theater.rows  = _thCollectRows();
-  _thBuild();
-  let r = _theater.rows.findIndex(function (row) { return row.title === rowTitle; });
-  if (r < 0) r = 0;
-  const c = cur ? Math.max(0, _theater.rows[r].items.indexOf(cur)) : 0;
-  _theater.row = r;
-  _thFocus(r, c, { instant: true });
+  _thRebuild({ keepItem: true });
   const pill = document.getElementById('th-sort-btn');
   if (pill && !_reducedMotion()) {
     pill.classList.remove('th-sort-flash');
@@ -3505,6 +3473,7 @@ function _thSetSort(mode) {
 }
 
 function _thCycleSort() {
+  if (_theater.chip === 'recent') { _thSyncSortUI(); showToast('Recently Added is always newest first'); return; }
   const i = _TH_SORTS.findIndex(function (s) { return s.id === _thSortMode(); });
   _thSetSort(_TH_SORTS[(i + 1) % _TH_SORTS.length].id);
 }
@@ -3531,7 +3500,7 @@ function _thInitSort() {
   _thSyncSortUI();
 }
 
-/** Arrow keys / Enter / Esc inside the open sort menu. Returns true if handled. */
+/** Arrow keys / O inside the open sort menu. Returns true if handled. */
 function _thSortMenuKey(e) {
   const menu = document.getElementById('th-sort-menu');
   if (!menu || menu.hidden) return false;
@@ -3550,198 +3519,253 @@ function _thSortMenuKey(e) {
   return false;   // Enter / Space click the focused item; Tab moves focus normally
 }
 
-function _thBuild() {
-  const track = document.getElementById('th-rows-track');
-  track.innerHTML = '';
-  track.style.transform = '';
-  document.getElementById('th-rows').scrollTop = 0;
-  _theater.rows.forEach(function (row, r) {
-    const sec = document.createElement('section');
-    sec.className   = 'th-row';
-    sec.dataset.row = r;
-    sec.innerHTML =
-      '<h2 class="th-row-title">' +
-        (row.kind === 'collection' ? '<span class="th-row-kind">Collection</span>' : '') +
-        escHtml(row.title) + '<span class="th-row-count">' + row.items.length + '</span>' +
-      '</h2>';
-    const vp = document.createElement('div');
-    vp.className = 'th-row-viewport';
-    const tr = document.createElement('div');
-    tr.className = 'th-row-track';
-    row.items.forEach(function (item, c) {
-      const card = document.createElement('button');
-      card.type        = 'button';
-      card.className   = 'th-card';
-      card.tabIndex    = -1;
-      card.dataset.col = c;
-      card.setAttribute('aria-label', item.dataset.title || '');
-      if (item.dataset.color) card.style.setProperty('--th-glow', _hexToRgba(item.dataset.color, 0.7));
-      const img = document.createElement('img');
-      img.src       = _thumbUrl(item.dataset.filename);
-      img.alt       = '';
-      img.width     = 400;
-      img.height    = 600;
-      img.loading   = c < 10 ? 'eager' : 'lazy';
-      img.decoding  = 'async';
-      img.draggable = false;
-      card.appendChild(img);
-      tr.appendChild(card);
-    });
-    vp.appendChild(tr);
-    sec.appendChild(vp);
-    track.appendChild(sec);
-    row.el = sec; row.viewport = vp; row.track = tr; row.col = 0;
-    vp.addEventListener('scroll', function () { _thOnRowScroll(r); }, { passive: true });
+// ── Filter chips ──
+
+const RECENT_CHIP_COUNT = 40;
+
+function _thCollectChips() {
+  const items = Array.from(document.querySelectorAll('.grid-item'));
+  const byFile = new Map(items.map(function (i) { return [i.dataset.filename, i]; }));
+  const chips = [{ id: 'all', label: 'All', items: items }];
+  function add(id, label, list, kind) { if (list.length) chips.push({ id: id, label: label, items: list, kind: kind || '' }); }
+  add('want',      'Want to Watch', items.filter(function (i) { return i.dataset.watched === 'want_to_watch'; }));
+  add('watched',   'Watched',       items.filter(function (i) { return i.dataset.watched === 'watched'; }));
+  add('unwatched', 'Unwatched',     items.filter(function (i) { return !i.dataset.watched; }));
+  add('recent',    'Recently Added', _theater.recent.slice(0, RECENT_CHIP_COUNT)
+    .map(function (r) { return byFile.get(r.filename); }).filter(Boolean));
+  const groups = {};
+  items.forEach(function (i) {
+    const g = (i.dataset.collection || '').trim();
+    if (g) (groups[g] = groups[g] || []).push(i);
   });
+  Object.keys(groups).sort(function (a, b) { return _titleCollator.compare(sortKey(a), sortKey(b)); })
+    .forEach(function (g) { add('col:' + g, g, groups[g], 'collection'); });
+  return chips;
+}
+
+function _thRenderChips() {
+  const bar = document.getElementById('th-chips');
+  if (!bar) return;
+  bar.innerHTML = '';
+  _theater.chips.forEach(function (c) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'th-chip' + (c.kind ? ' th-chip-' + c.kind : '') + (c.id === _theater.chip ? ' active' : '');
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-selected', c.id === _theater.chip ? 'true' : 'false');
+    b.tabIndex = -1;
+    b.dataset.chip = c.id;
+    b.innerHTML = escHtml(c.label) + '<span class="th-chip-n">' + c.items.length + '</span>';
+    bar.appendChild(b);
+  });
+  bar.querySelector('.th-chip.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
+function _thSetChip(id) {
+  if (!_theater.chips.some(function (c) { return c.id === id; }) || id === _theater.chip) return;
+  _thCloseVariants(true);
+  _theater.chip = id;
+  _thRenderChips();
+  _thSyncSortUI();
+  _thRebuild({ focus: 0, cascade: true });
+}
+
+function _thStepChip(d) {
+  const i = _theater.chips.findIndex(function (c) { return c.id === _theater.chip; });
+  const n = _theater.chips.length;
+  if (n > 1) _thSetChip(_theater.chips[(i + d + n) % n].id);
+}
+
+// ── Grid ──
+
+/** Display list for the current chip: one entry per poster, or per stack in stacked mode. */
+function _thBuildList() {
+  const chip  = _theater.chips.find(function (c) { return c.id === _theater.chip; }) || _theater.chips[0];
+  const items = chip ? chip.items : [];
+  let entries;
+  if (_stackMode) {
+    _syncStacks();
+    const byKey = new Map();
+    items.forEach(function (it) {
+      const st = _stackOf.get(it);
+      const k  = st ? st.key : it.dataset.filename;
+      if (!byKey.has(k)) byKey.set(k, []);
+      byKey.get(k).push(it);
+    });
+    entries = Array.from(byKey.values()).map(function (members) {
+      const st  = _stackOf.get(members[0]);
+      const rep = st && members.indexOf(st.cover) >= 0 ? st.cover : members[0];
+      return { item: rep, members: members };
+    });
+  } else {
+    entries = items.map(function (it) { return { item: it, members: [it] }; });
+  }
+  // Recently Added: newest first; everything else follows the sort (stacks by their shared title)
+  const mode  = chip && chip.id === 'recent' ? 'recent' : _thSortMode();
+  const order = _thSortList(entries.map(function (e) { return e.item; }), mode);
+  const byRep = new Map(entries.map(function (e) { return [e.item, e]; }));
+  return order.map(function (rep) { return byRep.get(rep); });
+}
+
+function _thCols() {
+  const grid = document.getElementById('th-grid');
+  const cols = grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length : 4;
+  return Math.max(1, cols);
+}
+
+function _thCardEl(i) {
+  return document.getElementById('th-grid')?.children[i] || null;
+}
+
+function _thCaption(item) {
+  const yr = item.dataset.year && item.dataset.year !== 'N/A' ? item.dataset.year : '';
+  const rating = _ratingText(item, true);
+  return '<span class="th-cap-title">' + escHtml(item.dataset.title || '') + '</span>' +
+    '<span class="th-cap-year">' + escHtml(yr) + '</span>' +
+    '<span class="th-cap-rating">' + escHtml(rating || 'No rating') + '</span>';
+}
+
+function _thCardHTML(entry) {
+  const it = entry.item;
+  const n  = entry.members.length;
+  const status = it.dataset.watched === 'watched' ? '<span class="th-status th-status-done" aria-label="Watched">✓</span>'
+               : it.dataset.watched === 'want_to_watch' ? '<span class="th-status th-status-want" aria-label="Want to Watch">♥</span>' : '';
+  return '<span class="th-poster">' +
+      '<img alt="" width="400" height="600" decoding="async" loading="lazy" draggable="false" src="' +
+        escHtml(_thumbUrl(it.dataset.filename)) + '" data-full="' + escHtml(_posterUrl(it.dataset.filename)) + '" />' +
+      (n > 1 ? '<span class="th-stack-badge" aria-label="' + n + ' posters">×' + n + '</span>' : '') +
+      status +
+    '</span>' +
+    '<span class="th-cap">' + _thCaption(it) + '</span>';
+}
+
+function _thRenderGrid() {
+  const grid = document.getElementById('th-grid');
+  const empty = document.getElementById('th-empty');
+  if (!grid) return;
+  if (_theater.io) { _theater.io.disconnect(); _theater.io = null; }
+  const frag = document.createDocumentFragment();
+  _theater.list.forEach(function (entry, i) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'th-card';
+    card.tabIndex = -1;
+    card.dataset.i = i;
+    card.setAttribute('aria-label', (entry.item.dataset.title || '') +
+      (entry.members.length > 1 ? ', ' + entry.members.length + ' posters' : ''));
+    if (entry.item.dataset.color) card.style.setProperty('--th-glow', _hexToRgba(entry.item.dataset.color, 0.75));
+    card.innerHTML = _thCardHTML(entry);
+    frag.appendChild(card);
+  });
+  grid.replaceChildren(frag);
+  if (empty) empty.hidden = _theater.list.length > 0;
+  _thObserveImages();
+}
+
+/** Full-size posters for the visible rows plus the next two; thumbnails elsewhere. */
+function _thObserveImages() {
+  const scroller = document.getElementById('th-scroll');
+  const first = _thCardEl(0);
+  if (!scroller || !first || !('IntersectionObserver' in window)) return;
+  const rowH = first.offsetHeight || 600;
+  _theater.io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (!en.isIntersecting) return;
+      const img = en.target;
+      _theater.io.unobserve(img);
+      const full = img.dataset.full;
+      if (!full || img.src.endsWith(full)) return;
+      const pre = new Image();
+      pre.decoding = 'async';
+      pre.onload = function () { img.src = full; };
+      pre.src = full;
+    });
+  }, { root: scroller, rootMargin: Math.round(rowH * 2.1) + 'px 0px' });
+  document.querySelectorAll('#th-grid .th-poster img').forEach(function (img) { _theater.io.observe(img); });
+}
+
+/** Drop the first rows in from the top with a short stagger (the rest just appear). */
+function _thCascade() {
+  if (_reducedMotion() || !Element.prototype.animate) return;
+  const n = Math.min(_theater.list.length, _thCols() * 3);
+  for (let i = 0; i < n; i++) {
+    _thCardEl(i)?.animate([
+      { transform: 'translateY(-56px) scale(0.96)', opacity: 0 },
+      { transform: 'none', opacity: 1 },
+    ], { duration: 460, delay: i * 25, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'backwards' });
+  }
+}
+
+/** Rebuild the grid (chip / sort / stack / delete changes). opts: { keepItem, focus, cascade } */
+function _thRebuild(opts) {
+  opts = opts || {};
+  const keep = opts.keepItem ? _thCurItem() : null;
+  _theater.list = _thBuildList();
+  _thRenderGrid();
+  let i = opts.focus || 0;
+  if (keep) {
+    const found = _theater.list.findIndex(function (e) { return e.members.indexOf(keep) >= 0; });
+    if (found >= 0) i = found;
+  }
+  _theater.focus = -1;
+  if (opts.focus === 0 || !keep) document.getElementById('th-scroll').scrollTop = 0;
+  _thFocus(i, { instant: true, scroll: !!keep });
+  if (opts.cascade) _thCascade();
 }
 
 function _thCurItem() {
-  const row = _theater.rows[_theater.row];
-  return row ? row.items[row.col] : null;
+  const e = _theater.list[_theater.focus];
+  return e ? e.item : null;
 }
 
-function _thCardEl(r, c) {
-  const row = _theater.rows[r];
-  return row && row.track ? row.track.children[c] : null;
-}
-
-/** Move focus to row r / column c. opts: { reveal: true|false|'ifneeded', instant } */
-function _thFocus(r, c, opts) {
+/** Move focus to card i. opts: { scroll: true|false, instant } */
+function _thFocus(i, opts) {
   opts = opts || {};
-  const rows = _theater.rows;
-  if (!rows.length) return;
-  r = Math.max(0, Math.min(rows.length - 1, r));
-  const row = rows[r];
-  c = Math.max(0, Math.min(row.items.length - 1, c));
-
-  const prevRow = rows[_theater.row];
-  if (prevRow) {
-    _thCardEl(_theater.row, prevRow.col)?.classList.remove('th-focus');
-    prevRow.el?.classList.remove('th-active');
-  }
-  _theater.row = r;
-  row.col = c;
-  row.el.classList.add('th-active');
-  _thCardEl(r, c)?.classList.add('th-focus');
-
-  if (opts.reveal !== false) _thReveal(r, !!opts.instant, opts.reveal === 'ifneeded');
+  const n = _theater.list.length;
+  if (!n) { _theater.focus = 0; return; }
+  i = Math.max(0, Math.min(n - 1, i));
+  const prev = _thCardEl(_theater.focus);
+  const card = _thCardEl(i);
+  if (prev && prev !== card) prev.classList.remove('th-focus');
+  const cols = _thCols();
+  const rowChanged = _theater.focus < 0 || Math.floor(_theater.focus / cols) !== Math.floor(i / cols);
+  _theater.focus = i;
+  if (!card) return;
+  card.classList.add('th-focus');
+  if (opts.scroll !== false && (rowChanged || !_thInView(card))) _thScrollTo(card, opts.instant);
   _thRenderHero();
   clearTimeout(_theater.bgTimer);
   _theater.bgTimer = setTimeout(_thSettled, 110);
 }
 
-/** Bring row r's focused card into view — transform in pointer mode, scroll in touch mode. */
-function _thReveal(r, instant, onlyIfNeeded) {
-  const row = _theater.rows[r];
-  const card = _thCardEl(r, row.col);
-  if (!row || !card) return;
-  const rowsEl    = document.getElementById('th-rows');
-  const rowsTrack = document.getElementById('th-rows-track');
-  const pad   = parseFloat(getComputedStyle(row.track).paddingLeft) || 0;
-  const vpW   = row.viewport.clientWidth;
-  const maxX  = Math.max(0, row.track.scrollWidth - vpW);
-  const peek  = row.col > 0 ? card.offsetWidth * 0.35 : 0;
-  let x = Math.round(Math.min(Math.max(0, card.offsetLeft - pad - peek), maxX));
-  const viewH = rowsEl.clientHeight - (parseFloat(getComputedStyle(rowsEl).paddingTop) || 0);
-  const maxY  = Math.max(0, rowsTrack.scrollHeight - viewH);
-  let y = Math.min(row.el.offsetTop, maxY);
-
-  if (_theater.touch) {
-    const behavior = (instant || _reducedMotion()) ? 'auto' : 'smooth';
-    _theater.ignoreScrollUntil = performance.now() + 700;
-    if (onlyIfNeeded) {
-      const l = card.offsetLeft - row.viewport.scrollLeft;
-      if (l >= 0 && l + card.offsetWidth <= vpW) x = row.viewport.scrollLeft;
-    }
-    row.viewport.scrollTo({ left: x, behavior: behavior });
-    rowsEl.scrollTo({ top: y, behavior: behavior });
-    return;
-  }
-
-  if (onlyIfNeeded) {
-    const curX = row.x || 0;
-    const l = card.offsetLeft - curX;
-    if (l >= pad * 0.5 && l + card.offsetWidth <= vpW - pad * 0.5) x = curX;
-    const curY = _theater.y || 0;
-    const top = row.el.offsetTop - curY;
-    if (top >= 0 && top + row.el.offsetHeight <= rowsEl.clientHeight) y = curY;
-  }
-  _thSetTransform(row.track, 'translate3d(' + (-x) + 'px,0,0)', instant);
-  _thSetTransform(rowsTrack, 'translate3d(0,' + (-y) + 'px,0)', instant);
-  row.x = x;
-  _theater.y = y;
+function _thInView(card) {
+  const sc = document.getElementById('th-scroll');
+  const r = card.getBoundingClientRect(), s = sc.getBoundingClientRect();
+  return r.top >= s.top && r.bottom <= s.bottom;
 }
 
-function _thSetTransform(el, value, instant) {
-  if (instant) {
-    el.classList.add('th-no-anim');
-    el.style.transform = value;
-    void el.offsetWidth;
-    el.classList.remove('th-no-anim');
-  } else {
-    el.style.transform = value;
-  }
+/** Keep the focused row in the upper-middle of the screen. */
+function _thScrollTo(card, instant) {
+  const sc = document.getElementById('th-scroll');
+  if (!sc) return;
+  const top = card.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
+  sc.scrollTo({ top: Math.max(0, top - sc.clientHeight * 0.22),
+                behavior: instant || _reducedMotion() ? 'auto' : 'smooth' });
 }
 
-function _thRevealAll(instant) {
-  _theater.rows.forEach(function (row, r) { if (r !== _theater.row) _thReveal(r, true); });
-  _thReveal(_theater.row, instant);
-}
-
-/** Switch between transform-driven (keys/mouse/pad) and native-scroll (touch) rows. */
-function _thSetTouch(on) {
-  if (_theater.touch === on) return;
-  _theater.touch = on;
-  const theater = document.getElementById('theater');
-  theater.classList.toggle('th-touch', on);
-  document.getElementById('th-rows-track').style.transform = '';
-  _theater.y = 0;
-  _theater.rows.forEach(function (row) { row.track.style.transform = ''; row.x = 0; row.viewport.scrollLeft = 0; });
-  document.getElementById('th-rows').scrollTop = 0;
-  _thRevealAll(true);
-}
-
+/** Refresh the focused card's caption (title / year / rating with its source). */
 function _thRenderHero() {
   const item = _thCurItem();
-  const hero = document.getElementById('th-hero');
-  if (!item || !hero) return;
-  const year   = item.dataset.year && item.dataset.year !== 'N/A' ? item.dataset.year : '';
-  const score  = _ratingText(item, false);
-  const scoreSrc = _RATING_LABELS[item.dataset.ratingSrc] || '';
-  const pr     = parseInt(item.dataset.personalRating || '0', 10);
-  const plot   = item.dataset.plot && item.dataset.plot !== 'No plot available' ? item.dataset.plot : '';
-  const status = item.dataset.watched === 'watched' ? '\u2713 Watched'
-               : item.dataset.watched === 'want_to_watch' ? '\u2665 Want to Watch' : '';
-  const parts = [];
-  if (year)   parts.push('<span>' + escHtml(year) + '</span>');
-  if (score)  parts.push((scoreSrc ? '<span class="th-imdb">' + escHtml(scoreSrc) + '</span>' : '') +
-                         '<span>' + escHtml(score) + '</span>');
-  if (pr > 0) parts.push('<span class="th-stars" aria-label="My rating ' + pr + ' of 5">' + '\u2605'.repeat(pr) + '<span class="th-stars-off">' + '\u2605'.repeat(5 - pr) + '</span></span>');
-  if (status) parts.push('<span class="th-status">' + status + '</span>');
-
-  document.getElementById('th-title').textContent = item.dataset.title || '';
-  document.getElementById('th-meta').innerHTML    = parts.join('<span class="th-dot">\u00b7</span>');
-  document.getElementById('th-plot').textContent  = plot;
-  hero.classList.remove('th-in');
-  void hero.offsetWidth;          // restart the fade-in
-  hero.classList.add('th-in');
+  const card = _thCardEl(_theater.focus);
+  if (!item || !card) return;
+  const cap = card.querySelector('.th-cap');
+  if (cap) cap.innerHTML = _thCaption(item);
 }
 
-/** Runs once focus has been still for ~100ms: background crossfade + preloading. */
+/** Runs once focus has been still for ~100ms: background crossfade. */
 function _thSettled() {
   const item = _thCurItem();
-  if (!item || !_theater.active) return;
-  _thSetBackground(item);
-  // Preload full-size posters for the focused card and its neighbours only
-  const row = _theater.rows[_theater.row];
-  [row.col, row.col + 1, row.col - 1].forEach(function (i) {
-    const it = row.items[i];
-    if (!it || _theater.preloaded.has(it.dataset.filename)) return;
-    _theater.preloaded.add(it.dataset.filename);
-    const im = new Image();
-    im.decoding = 'async';
-    im.src = _posterUrl(it.dataset.filename);
-  });
+  if (item && _theater.active) _thSetBackground(item);
 }
 
 function _thSetBackground(item) {
@@ -3766,78 +3790,119 @@ function _thSetBackground(item) {
 }
 
 function _thMove(dx, dy) {
-  if (!_theater.rows.length) return;
-  if (dy) {
-    const r = _theater.row + dy;
-    if (r < 0 || r >= _theater.rows.length) return;
-    _thFocus(r, _theater.rows[r].col);
-  } else {
-    _thFocus(_theater.row, _theater.rows[_theater.row].col + dx);
+  if (_theater.variants) { if (dx) _thFocusVariant(_theater.variants.focus + dx); return; }
+  if (!_theater.list.length) return;
+  const cols = _thCols();
+  let i = _theater.focus + dx + dy * cols;
+  if (dy && (i < 0 || i >= _theater.list.length)) {
+    // Down from a partial last row: go to the last card; up from the first row: stay
+    if (dy > 0 && Math.floor(_theater.focus / cols) < Math.floor((_theater.list.length - 1) / cols)) i = _theater.list.length - 1;
+    else return;
   }
+  _thFocus(i);
 }
 
 function _thOpen() {
-  const item = _thCurItem();
-  const img  = item?.querySelector('img');
+  if (_theater.variants) {
+    const v = _theater.variants.entry.members[_theater.variants.focus];
+    const img = v?.querySelector('img');
+    if (img) openLightbox(img.src, img);
+    return;
+  }
+  const entry = _theater.list[_theater.focus];
+  if (!entry) return;
+  if (entry.members.length > 1) { _thOpenVariants(entry); return; }
+  const img = entry.item.querySelector('img');
   if (img) openLightbox(img.src, img);
 }
 
-/** Keep theater focus on the poster the lightbox stepped to. */
-function _thSyncToItem(item) {
-  const row = _theater.rows[_theater.row];
-  const c = row ? row.items.indexOf(item) : -1;
-  if (c >= 0) _thFocus(_theater.row, c);
-}
+// ── Stacked mode: fan a stack's posters out in an overlay row ──
 
-/** Drop a deleted poster from every row, keeping focus as close as possible. */
-function _thRemoveItem(item) {
-  const cur = { r: _theater.row, c: _theater.rows[_theater.row]?.col || 0 };
-  _theater.rows = _theater.rows
-    .map(function (row) { return Object.assign({}, row, { items: row.items.filter(function (i) { return i !== item; }) }); })
-    .filter(function (row) { return row.items.length; });
-  if (!_theater.rows.length) { exitTheater(); return; }
-  _thBuild();
-  _theater.row = Math.min(cur.r, _theater.rows.length - 1);
-  _thFocus(_theater.row, cur.c, { instant: true });
-}
-
-function _thOnRowScroll(r) {
-  if (!_theater.touch || performance.now() < _theater.ignoreScrollUntil) return;
-  const row = _theater.rows[r];
-  clearTimeout(row.scrollTimer);
-  row.scrollTimer = setTimeout(function () {
-    if (performance.now() < _theater.ignoreScrollUntil) return;
-    const pad  = parseFloat(getComputedStyle(row.track).paddingLeft) || 0;
-    const left = row.viewport.scrollLeft;
-    const cards = row.track.children;
-    let c = 0;
-    for (let i = 0; i < cards.length; i++) {
-      if (cards[i].offsetLeft + cards[i].offsetWidth / 2 >= left + pad) { c = i; break; }
-    }
-    if (r === _theater.row) {
-      if (c !== row.col) _thFocus(r, c, { reveal: false });
-    } else if (r === _theater.touchRow) {
-      _thFocus(r, c, { reveal: false });
-    } else {
-      row.col = c;   // e.g. a scroll-snap settle on another row — remember, don't steal focus
-    }
-  }, 140);
-}
-
-function _thOnRowsScroll() {
-  if (!_theater.touch || performance.now() < _theater.ignoreScrollUntil) return;
-  clearTimeout(_theater.vScrollTimer);
-  _theater.vScrollTimer = setTimeout(function () {
-    if (performance.now() < _theater.ignoreScrollUntil) return;
-    const top = document.getElementById('th-rows').scrollTop;
-    let best = 0, bestD = Infinity;
-    _theater.rows.forEach(function (row, r) {
-      const d = Math.abs(row.el.offsetTop - top);
-      if (d < bestD) { bestD = d; best = r; }
+function _thOpenVariants(entry) {
+  const box   = document.getElementById('th-variants');
+  const track = document.getElementById('th-var-track');
+  if (!box || !track) return;
+  _theater.variants = { entry: entry, focus: 0 };
+  document.getElementById('th-var-title').textContent = entry.item.dataset.title || '';
+  document.getElementById('th-var-count').textContent = entry.members.length + ' posters';
+  track.innerHTML = '';
+  entry.members.forEach(function (m, i) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'th-var-card';
+    b.tabIndex = -1;
+    b.dataset.v = i;
+    b.setAttribute('aria-label', 'Poster ' + (i + 1) + ' of ' + entry.members.length);
+    b.innerHTML = '<img alt="" decoding="async" draggable="false" src="' + escHtml(_posterUrl(m.dataset.filename)) + '" />' +
+      '<span class="th-var-label">Poster ' + (i + 1) + ' of ' + entry.members.length + '</span>';
+    track.appendChild(b);
+  });
+  box.hidden = false;
+  document.getElementById('theater').classList.add('th-variants-open');
+  _thFocusVariant(0);
+  if (!_reducedMotion() && box.animate) {
+    box.animate([{ opacity: 0, transform: 'translateY(24px)' }, { opacity: 1, transform: 'none' }],
+                { duration: 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
+    track.querySelectorAll('.th-var-card').forEach(function (c, i) {
+      c.animate([{ opacity: 0, transform: 'translateY(30px) scale(0.92)' }, { opacity: 1, transform: 'none' }],
+                { duration: 340, delay: 40 + i * 35, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'backwards' });
     });
-    if (best !== _theater.row) _thFocus(best, _theater.rows[best].col, { reveal: false });
-  }, 140);
+  }
 }
+
+function _thFocusVariant(i) {
+  const v = _theater.variants;
+  if (!v) return;
+  i = Math.max(0, Math.min(v.entry.members.length - 1, i));
+  const track = document.getElementById('th-var-track');
+  track.querySelectorAll('.th-var-card').forEach(function (c, k) { c.classList.toggle('th-focus', k === i); });
+  v.focus = i;
+  track.children[i]?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: _reducedMotion() ? 'auto' : 'smooth' });
+  _thSetBackground(v.entry.members[i]);
+}
+
+function _thCloseVariants(instant) {
+  const box = document.getElementById('th-variants');
+  if (!_theater.variants || !box) return false;
+  _theater.variants = null;
+  document.getElementById('theater')?.classList.remove('th-variants-open');
+  if (instant || _reducedMotion() || !box.animate) { box.hidden = true; return true; }
+  box.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(24px)' }], { duration: 180, easing: 'ease-in' })
+    .finished.then(function () { if (!_theater.variants) box.hidden = true; }, function () { box.hidden = true; });
+  return true;
+}
+
+/** Posters the lightbox steps through while Big Picture is open. */
+function _thSequence() {
+  if (_theater.variants) return _theater.variants.entry.members;
+  return _theater.list.reduce(function (acc, e) { return acc.concat(e.members); }, []);
+}
+
+/** Keep focus on the poster the lightbox stepped to. */
+function _thSyncToItem(item) {
+  if (_theater.variants) {
+    const k = _theater.variants.entry.members.indexOf(item);
+    if (k >= 0) { _thFocusVariant(k); return; }
+  }
+  const i = _theater.list.findIndex(function (e) { return e.members.indexOf(item) >= 0; });
+  if (i >= 0) _thFocus(i);
+}
+
+/** Drop a deleted poster, keeping focus as close as possible. */
+function _thRemoveItem(item) {
+  _thCloseVariants(true);
+  const at = _theater.focus;
+  _theater.chips = _thCollectChips();
+  if (!_theater.chips.some(function (c) { return c.id === _theater.chip; })) _theater.chip = 'all';
+  _thRenderChips();
+  _theater.list = _thBuildList();
+  if (!_theater.list.length && _theater.chip === 'all') { exitTheater(); return; }
+  _thRenderGrid();
+  _theater.focus = -1;
+  _thFocus(Math.min(at, _theater.list.length - 1), { instant: true });
+}
+
+// ── Enter / exit ──
 
 async function enterTheater() {
   if (_theater.active || _theater.busy) return;
@@ -3849,7 +3914,6 @@ async function enterTheater() {
   document.getElementById('recent-toggle-btn')?.classList.remove('active');
 
   // Fullscreen must be requested inside the click / key gesture, so start it first
-  // (every poster, newest first: the Recently Added row + the "Recently added" sort)
   const recentReq = fetch('/recently_added?limit=0')
     .then(function (r) { return r.ok ? r.json() : []; })
     .catch(function () { return []; });
@@ -3858,38 +3922,32 @@ async function enterTheater() {
   await _refreshPosterColors();
   _theater.recent     = recent;
   _theater.recentRank = new Map(recent.map(function (r, i) { return [r.filename, i]; }));
-  _thSyncSortUI();
-  _theater.rows    = _thCollectRows();
-  _theater.row     = 0;
-  _theater.scrollY = window.scrollY;
-  _theater.touch   = _coarseMQ.matches;
-  theater.classList.toggle('th-touch', _theater.touch);
+  _theater.chip       = 'all';
+  _theater.chips      = _thCollectChips();
+  _theater.list       = _thBuildList();
+  _theater.scrollY    = window.scrollY;
 
-  // Morph: the grid container becomes the rows area; the first poster morphs too if visible
-  const grid   = document.querySelector('.grid-container');
-  const rowsEl = document.getElementById('th-rows');
-  const srcImg = _visibleGridImg(_theater.rows[0]?.items[0]);
-  if (grid)   grid.style.viewTransitionName   = 'th-grid';
-  if (srcImg) srcImg.style.viewTransitionName = 'th-poster';
-  let dstImg = null;
+  // The library grid morphs into the Big Picture grid; the first rows drop in
+  const grid     = document.querySelector('.grid-container');
+  const scroller = document.getElementById('th-scroll');
+  if (grid) grid.style.viewTransitionName = 'th-grid';
 
   const usedVT = await _withViewTransition(function () {
-    if (grid)   grid.style.viewTransitionName   = '';
-    if (srcImg) srcImg.style.viewTransitionName = '';
-    _thBuild();
+    if (grid) grid.style.viewTransitionName = '';
+    _thRenderChips();
+    _thSyncSortUI();
+    _thRenderGrid();
     theater.hidden = false;
     document.body.classList.add('theater-open');
     document.getElementById('theater-btn')?.classList.add('active');
     _theater.active = true;
-    _thFocus(0, 0, { instant: true });
-    rowsEl.style.viewTransitionName = 'th-grid';
-    if (srcImg) {
-      dstImg = _thCardEl(0, 0)?.querySelector('img');
-      if (dstImg) dstImg.style.viewTransitionName = 'th-poster';
-    }
+    scroller.scrollTop = 0;
+    _theater.focus = -1;
+    _thFocus(0, { scroll: false });
+    scroller.style.viewTransitionName = 'th-grid';
+    _thCascade();
   });
-  rowsEl.style.viewTransitionName = '';
-  if (dstImg) dstImg.style.viewTransitionName = '';
+  scroller.style.viewTransitionName = '';
   if (!usedVT && !_reducedMotion()) {
     theater.classList.add('th-fade-in');
     setTimeout(function () { theater.classList.remove('th-fade-in'); }, 400);
@@ -3903,18 +3961,20 @@ async function exitTheater(opts) {
   _theater.busy = true;
   const theater = document.getElementById('theater');
   closeLightbox();
+  _thCloseVariants(true);
+  _thToggleSortMenu(false);
   if (!(opts && opts.fromFullscreenChange)) await _exitFullscreen();
 
-  const item   = _thCurItem();
-  const grid   = document.querySelector('.grid-container');
-  const rowsEl = document.getElementById('th-rows');
-  const card   = _thCardEl(_theater.row, _theater.rows[_theater.row]?.col)?.querySelector('img');
-  rowsEl.style.viewTransitionName = 'th-grid';
+  const item     = _thCurItem();
+  const grid     = document.querySelector('.grid-container');
+  const scroller = document.getElementById('th-scroll');
+  const card     = _thCardEl(_theater.focus)?.querySelector('img');
+  scroller.style.viewTransitionName = 'th-grid';
   if (card) card.style.viewTransitionName = 'th-poster';
   let dstImg = null;
 
   await _withViewTransition(function () {
-    rowsEl.style.viewTransitionName = '';
+    scroller.style.viewTransitionName = '';
     if (card) card.style.viewTransitionName = '';
     theater.hidden = true;
     document.body.classList.remove('theater-open');
@@ -3927,89 +3987,78 @@ async function exitTheater(opts) {
   });
   if (grid) grid.style.viewTransitionName = '';
   if (dstImg) dstImg.style.viewTransitionName = '';
-  document.getElementById('th-rows-track').innerHTML = '';
-  _theater.rows = [];
+  if (_theater.io) { _theater.io.disconnect(); _theater.io = null; }
+  document.getElementById('th-grid').innerHTML = '';
+  _theater.list = [];
   _theater.busy = false;
 }
 
-/** Arrow keys / WASD / Enter inside theater. Returns true if the key was used. */
+/** Keyboard inside Big Picture. Returns true if the key was used. */
 function _thHandleKey(e) {
   const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   const moves = {
     ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0],
     ArrowUp:   [0, -1], w: [0, -1], ArrowDown:  [0, 1], s: [0, 1],
   };
-  if (moves[k]) {
-    _thSetTouch(false);
-    _thMove(moves[k][0], moves[k][1]);
-    return true;
-  }
+  if (moves[k]) { _thMove(moves[k][0], moves[k][1]); return true; }
   if (k === 'Enter' || k === ' ') { _thOpen(); return true; }
-  if (k === 'o') { _thCycleSort(); return true; }      // (S is already "down" in WASD)
-  if (k === 'Home') { _thFocus(_theater.row, 0); return true; }
-  if (k === 'End')  { _thFocus(_theater.row, Infinity); return true; }
+  if (k === 'o') { _thCycleSort(); return true; }      // (S is "down" in WASD)
+  if (k === 'q') { _thStepChip(-1); return true; }
+  if (k === 'e') { _thStepChip(1); return true; }
+  if (_theater.variants) return false;
+  const page = _thCols() * 3;
+  if (k === 'PageDown') { _thFocus(_theater.focus + page); return true; }
+  if (k === 'PageUp')   { _thFocus(_theater.focus - page); return true; }
+  if (k === 'Home') { _thFocus(0); return true; }
+  if (k === 'End')  { _thFocus(_theater.list.length - 1); return true; }
   return false;
 }
 
 function _thInit() {
-  const theater = document.getElementById('theater');
-  const rowsEl  = document.getElementById('th-rows');
-  if (!theater || !rowsEl) return;
+  const theater  = document.getElementById('theater');
+  const scroller = document.getElementById('th-scroll');
+  const grid     = document.getElementById('th-grid');
+  if (!theater || !scroller || !grid) return;
 
-  // Click / tap a card. Touch: first tap focuses, second opens. Mouse: opens.
-  rowsEl.addEventListener('click', function (e) {
+  // Click / tap a card: open it (a stack fans out its posters)
+  grid.addEventListener('click', function (e) {
     const card = e.target.closest('.th-card');
     if (!card) return;
-    const r = parseInt(card.closest('.th-row').dataset.row, 10);
-    const c = parseInt(card.dataset.col, 10);
-    const already = r === _theater.row && c === _theater.rows[r].col;
-    _theater.rows.forEach(function (row) { clearTimeout(row.scrollTimer); });
-    clearTimeout(_theater.vScrollTimer);
-    _theater.ignoreScrollUntil = performance.now() + 700;
-    if (!already) _thFocus(r, c, { reveal: 'ifneeded' });
-    if (already || !_theater.touch) _thOpen();
+    const i = parseInt(card.dataset.i, 10);
+    if (i !== _theater.focus) _thFocus(i, { scroll: false });
+    _thOpen();
   });
 
-  // Mouse hover focuses — but only after real pointer movement, so the row
-  // sliding under a stationary cursor doesn't steal focus back.
-  theater.addEventListener('pointermove', function (e) {
-    if (e.pointerType !== 'mouse' || (!e.movementX && !e.movementY)) return;
-    _theater.lastMouse = performance.now();
-    if (_theater.touch) _thSetTouch(false);
-  });
-  rowsEl.addEventListener('pointerover', function (e) {
-    if (e.pointerType !== 'mouse' || _theater.touch || performance.now() - _theater.lastMouse > 150) return;
+  // Mouse hover focuses — only after real pointer movement, so content
+  // scrolling under a still cursor doesn't steal focus
+  grid.addEventListener('pointermove', function (e) {
+    if (e.pointerType !== 'mouse' || (!e.movementX && !e.movementY) || _theater.variants) return;
     const card = e.target.closest('.th-card');
     if (!card) return;
-    const r = parseInt(card.closest('.th-row').dataset.row, 10);
-    const c = parseInt(card.dataset.col, 10);
-    if (r !== _theater.row || c !== _theater.rows[r].col) _thFocus(r, c, { reveal: 'ifneeded' });
+    const i = parseInt(card.dataset.i, 10);
+    if (i !== _theater.focus) _thFocus(i, { scroll: false });
   });
 
-  theater.addEventListener('touchstart', function (e) {
-    const rowEl = e.target.closest && e.target.closest('.th-row');
-    _theater.touchRow = rowEl ? parseInt(rowEl.dataset.row, 10) : -1;
-    _thSetTouch(true);
-  }, { passive: true });
-  rowsEl.addEventListener('scroll', _thOnRowsScroll, { passive: true });
+  document.getElementById('th-chips')?.addEventListener('click', function (e) {
+    const b = e.target.closest('.th-chip');
+    if (b) _thSetChip(b.dataset.chip);
+  });
 
-  // Wheel: vertical → change row, horizontal / shift → change column
-  rowsEl.addEventListener('wheel', function (e) {
-    if (_theater.touch) return;
-    e.preventDefault();
-    const horiz = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);
-    const d = horiz ? (e.deltaX || e.deltaY) : e.deltaY;
-    const now = performance.now();
-    if (Math.abs(d) < 4 || now - _theater.wheelAt < (horiz ? 90 : 220)) return;
-    _theater.wheelAt = now;
-    if (horiz) _thMove(d > 0 ? 1 : -1, 0); else _thMove(0, d > 0 ? 1 : -1);
-  }, { passive: false });
+  const vars = document.getElementById('th-variants');
+  vars?.addEventListener('click', function (e) {
+    const c = e.target.closest('.th-var-card');
+    if (c) { _thFocusVariant(parseInt(c.dataset.v, 10)); _thOpen(); return; }
+    if (e.target.closest('.th-var-close') || e.target === vars) _thCloseVariants();
+  });
 
   let resizeT = 0;
   window.addEventListener('resize', function () {
     if (!_theater.active) return;
     clearTimeout(resizeT);
-    resizeT = setTimeout(function () { _thRevealAll(true); }, 120);
+    resizeT = setTimeout(function () {
+      const c = _thCardEl(_theater.focus);
+      if (c && !_thInView(c)) _thScrollTo(c, true);
+    }, 150);
   });
 
   // Leaving fullscreen by other means (browser UI, F11, Esc without keyboard lock) exits theater
@@ -4021,12 +4070,13 @@ function _thInit() {
 
   window.addEventListener('gamepadconnected', function () {
     _padStart();
-    if (_theater.active) showToast('\uD83C\uDFAE Gamepad connected');
+    if (_theater.active) showToast('🎮 Gamepad connected');
   });
 }
 
 // ── Gamepad (standard mapping) ────────────────────────────────────────────────
-// D-pad 12–15 / left stick → move · A (0) → open · B (1) → back · Start (9) → theater
+// D-pad 12–15 / left stick → move · A (0) → open · B (1) → back · Y (3) → sort
+// LB / RB (4 / 5) → previous / next filter chip · Start (9) → Big Picture
 
 const _pad = { raf: 0, dir: '', since: 0, last: 0, btn: {} };
 
@@ -4058,7 +4108,7 @@ function _padTick(t) {
     _pad.last = t;
     _padAction(dir);
   }
-  [[0, 'open'], [1, 'back'], [3, 'sort'], [9, 'start']].forEach(function (pair) {
+  [[0, 'open'], [1, 'back'], [3, 'sort'], [4, 'chip-prev'], [5, 'chip-next'], [9, 'start']].forEach(function (pair) {
     const pressed = b(pair[0]);
     if (pressed && !_pad.btn[pair[0]]) _padAction(pair[1]);
     _pad.btn[pair[0]] = pressed;
@@ -4078,14 +4128,16 @@ function _padAction(act) {
     return;
   }
   if (!_theater.active) { if (act === 'start') enterTheater(); return; }
-  _thSetTouch(false);
   if (act === 'left')  _thMove(-1, 0);
   if (act === 'right') _thMove(1, 0);
   if (act === 'up')    _thMove(0, -1);
   if (act === 'down')  _thMove(0, 1);
   if (act === 'open')  _thOpen();
   if (act === 'sort')  _thCycleSort();
-  if (act === 'back' || act === 'start') exitTheater();
+  if (act === 'chip-prev') _thStepChip(-1);
+  if (act === 'chip-next') _thStepChip(1);
+  if (act === 'back') { if (!_thCloseVariants()) exitTheater(); }
+  if (act === 'start') exitTheater();
 }
 
 // ── Poster colours (dominant colour per poster, from /poster_colors) ─────────
@@ -4345,6 +4397,8 @@ document.addEventListener('DOMContentLoaded', function () {
         closeLightbox();
       } else if (_fix.open) {
         closeFixPanel();
+      } else if (_theater.active && _thCloseVariants()) {
+        // closed the stack's poster row
       } else if (_theater.active && !document.getElementById('th-sort-menu')?.hidden) {
         _thToggleSortMenu(false);
         document.getElementById('th-sort-btn')?.focus();
